@@ -28,23 +28,9 @@ extern "C" {
     \
     //
 
-
-
-
-#define print_pointer(p) printf("%p\n", ((void *)p))
-
-
 // the LogWriter is a function that needs to be registered in the logger
 // to be able to write a buffer of byte into persistent memory
 typedef void (*LogWriter)(const uint8_t *data, const size_t size);
-// the StringWriterCallback is a function that needs to be registered in the logger
-// in case you want to call the logger_decode_buffer()
-// this will allow to output a log as a null terminated string
-typedef void (*StringWriterCallback)(const char* pString);
-// the Tracer is a function that needs to be registered in the logger
-// to be able to output the traces(logs in clear text) has it goes
-// not supported yet
-typedef void (*Tracer)(const char *format, va_list params);
 
 typedef enum {
   SEVERITY_VERBOSE,
@@ -62,32 +48,12 @@ typedef struct {
   const char * const message;
 } LogEntry;
 
-typedef struct {
-  struct {
-    uint32_t sector;
-    uint32_t page;
-    uint32_t size;
-  } info;
-  StringWriterCallback cb;
-  uint8_t* data;
-} NbLogBuffer;
-
-//void logger_init(LogWriter);
-
-//void logger_decode_buffer(NbLogBuffer* buffer);
-
 void logger_register_log_entries(LogEntry *entries, int count);
 
 void logger_register_log_writer(LogWriter writer, int is_compressed);
-//void logger_register_log_writer_compressed(LogWriter writer);
 
 void logger_log(uint16_t id, ...);
 void logger_log_printf(const char * format, ...);
-//void logger_assert_no_duplicate_entries();
-
-
-
-//LogEntry* logger_find_log_entry(uint16_t id);
 
 #ifdef __cplusplus
 }
