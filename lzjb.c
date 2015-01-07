@@ -107,7 +107,6 @@ typedef unsigned char uchar_t;
 #define MATCH_MIN 3
 #define MATCH_MAX ((1 << MATCH_BITS) + (MATCH_MIN - 1))
 #define OFFSET_MASK ((1 << (16 - MATCH_BITS)) - 1)
-#define LEMPEL_SIZE 128
 #define NBBY8    8                       /* number of bits per byte */
 
 size_t compress(uchar_t *s_start, uchar_t *d_start, size_t s_len, uint16_t *lempel_table, int lempel_table_size) {
@@ -244,7 +243,7 @@ sed -i 's/[^0-9. ]//g;s/     / /g;s/    / /g;s/   / /g;s/  / /g;s/^ //;s/ $//;' 
 
 
 
-
+/*
 #include <stdio.h>
 #include <string.h>
 
@@ -254,7 +253,8 @@ sed -i 's/[^0-9. ]//g;s/     / /g;s/    / /g;s/   / /g;s/  / /g;s/^ //;s/ $//;' 
 #define BUFFER_SIZE 2000
 char s_buffer[BUFFER_SIZE+1];
 char d_buffer[BUFFER_SIZE+1];
-uint16_t lempel[LEMPEL_SIZE];
+#define LEMPEL_SIZE2 128
+uint16_t lempel[LEMPEL_SIZE2];
 
 char u_buffer[BUFFER_SIZE+1];
 
@@ -292,7 +292,7 @@ int main(int argc, char *argv[]) {
         //s_buffer[i] = toupper(s_buffer[i]);
       }
       int d_len;
-      d_len = compress((uchar_t *) s_buffer, (uchar_t *) d_buffer, s_len, lempel, LEMPEL_SIZE);
+      d_len = compress((uchar_t *) s_buffer, (uchar_t *) d_buffer, s_len, lempel, LEMPEL_SIZE2);
       //s_buffer[s_len] = '\0';
       //printf ("%s", s_buffer);
       //printf("%d\n", d_len);
@@ -314,3 +314,5 @@ int main(int argc, char *argv[]) {
   
   return 0;	
 }
+*/
+
