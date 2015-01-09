@@ -155,7 +155,7 @@ TEST(LOGGER_PRINTF, Logger_GetNextSpecifierFromStringWithNoSpecifier_ReturnsZero
 
 
 
-#define BUFSIZE (128)
+#define BUFSIZE (256)
 
 TEST_GROUP(LOGGER_PRINTF_ENTRY) {
 
@@ -195,6 +195,16 @@ TEST(LOGGER_PRINTF_ENTRY, Logger_PrintStringWithSpecialCharacters_PrintsStringRe
   STRNCMP_EQUAL("[0X002A] !Simple text with no parameters and with special characters !\r\n", buffer, n);
 }
 
+TEST(LOGGER_PRINTF_ENTRY, Logger_PrintTextLongerThanTheMaximumBufferSize_ReturnsMinusOne) {
+  n = logger_snvprintf_entry(buffer, 128, 42, 0, 0, "This is a very long text with more characters than the buffer size. The function returns -1 if the buffer is not large enough. The maximum buffer size in logger is currently set to 128.", none);
+  CHECK(n < 0);
+}
+
+TEST(LOGGER_PRINTF_ENTRY, Logger_PrintFormattedTextLongerThanTheMaximumBufferSize_ReturnsMinusOne) {
+  n = logger_snvprintf_entry_test_helper(buffer, 128, 42, 0, 0, "This is a text with formatting longer than the buffer size %99.99f", 42.0);
+  CHECK(n < 0);
+}
+
 TEST(LOGGER_PRINTF_ENTRY, Logger_PrintStringWithParameters_PrintsFormattedString) {
   n = logger_snvprintf_entry_test_helper(buffer, BUFSIZE, 42, 0, 0, "Text with %c %s %5.2f, %d, and %#X", 'A', "String and", 12.2, 42, 42);
   STRNCMP_EQUAL("[0X002A] Text with A String and 12.20, 42, and 0X2A\n", buffer, n);
@@ -224,5 +234,54 @@ TEST(LOGGER_PRINTF_ENTRY, Logger_PrintCompressedStringWithFormatting_PrintsForma
   STRNCMP_EQUAL("[002A|Text with A string 2|\n", buffer, n);
 }
 
+TEST(LOGGER_PRINTF_ENTRY, Logger_PrintEncodedEmptyString_PrintsStringAddsIdAndNewLineAddsSeparators) {
+  n = logger_snvprintf_entry_test_helper(buffer, BUFSIZE, 42, 1, 1, "");
+  STRNCMP_EQUAL("[002A|\n", buffer, n);
+}
 
+TEST(LOGGER_PRINTF_ENTRY, Logger_PrintEncodedString_PrintsStringAddsIdAndNewLineAddsSeparators) {
+  n = logger_snvprintf_entry_test_helper(buffer, BUFSIZE, 42, 1, 1, "Text with no parameters");
+  STRNCMP_EQUAL("[002A|\n", buffer, n);
+}
+
+TEST(LOGGER_PRINTF_ENTRY, Logger_PrintEncodedStringWithParameters_PrintsFormattedString) {
+  n = logger_snvprintf_entry_test_helper(buffer, BUFSIZE, 42, 1, 1, "Text with character: %c string: %s integer: %d float: %5.2f", 'Z', "blah blah", 42, 3.14);
+  STRNCMP_EQUAL("[002A|Z|blah blah|42| 3.14|\n", buffer, n);
+  n = logger_snvprintf_entry_test_helper(buffer, BUFSIZE, 42, 1, 1, "Text with special character: %c string: %s", '\n', "\n||");
+  STRNCMP_EQUAL("[002A|\r|\r!!|\n", buffer, n);
+}
+
+
+
+
+
+TEST_GROUP(LOGGER_DECODE) {
+
+  char buffer[BUFSIZE];
+  int n;
+
+  va_list none;
+
+  void setup() {
+  }
+
+  void teardown() {
+  }
+
+  int logger_snvprintf_entry_test_helper(char *buffer, int length, uint16_t id, int compressed, int encode, const char *format, ...) {
+    va_list varargs;
+    va_start(varargs, format);
+    int len = logger_snvprintf_entry(buffer, length, id, compressed, encode, format, varargs);
+    va_end(varargs);
+    return len;
+  }
+
+};
+
+TEST(LOGGER_DECODE, Logger_DecodeId_ReturnsId) {
+  CHECK_EQUAL(42, logger_decode_get_id("[002A"));
+  CHECK_EQUAL(42, logger_decode_get_id("[002a"));
+  CHECK_EQUAL(0, logger_decode_get_id("[0000"));
+  CHECK_EQUAL(0xfFFf, logger_decode_get_id("[ffff"));
+}
 
