@@ -29,11 +29,11 @@
  *
  * Original:
  *
- * y a d d a _ y a d d a _ y a d d a , _ b l a h _ b l a h _ b l a h
+ * yadda yadda yadda, blah blah blah
  *
  * Compressed:
  *
- * y a d d a _ 6 11 , _ b l a h 5 10
+ * yadda 6 11, blah 5 10
  *
  * In the compressed output, the "6 11" simply means "to get the original
  * data, execute memmove(ptr, ptr - 6, 11)". Note that in this example,
@@ -101,13 +101,77 @@
 
 #include <sys/types.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 typedef unsigned char uchar_t;
 
-#define MATCH_BITS 6
+#define MATCH_BITS 4
 #define MATCH_MIN 3
 #define MATCH_MAX ((1 << MATCH_BITS) + (MATCH_MIN - 1))
 #define OFFSET_MASK ((1 << (16 - MATCH_BITS)) - 1)
 #define NBBY8    8                       /* number of bits per byte */
+ uint16_t lempel_table_collisions[4096] ={0};
+ char lempel_table_values[4096][6];
+
+typedef struct {
+   int index;
+   uint16_t locations[4];
+   char tags[4][4];
+} cache_entry_t;
+
+cache_entry_t cache[512] = {0};
+
+int cache_lookup(int index, const char *s, uint16_t *result) {
+  cache_entry_t *e = &cache[index];
+  int i;
+  for(i = 0; i < 4; i ++) {
+    if(strncmp(e->tags[i], s, 3) == 0) {
+      *result = e->locations[i];
+      return 1;
+    }
+  }
+  return 0;
+}
+
+void cache_insert(int index, const char *s, uint16_t result) {
+  cache_entry_t *e = &cache[index];
+  if(e->index >= 4) e->index = 0;
+  strncpy(e->tags[e->index], s, 3);
+  e->locations[e->index] = result;
+  ++ e->index;
+  e->index %= 4;
+}
+
+
+void print_table(uint16_t *lempel_table, int lempel_table_size) {
+  int i;
+
+  for(i = 0; i < lempel_table_size; i ++) {
+    //printf("[%4d] : %3d %5s %6u\n", i, lempel_table_collisions[i], lempel_table_values[i], lempel_table[i]);
+  }
+}
+
+void print_cache() {
+  int i, j;
+
+  for(i = 0; i < 512; i ++) {
+    for(j = 0; j < 4; j ++) {
+      printf("[%3d,%d] : %3s %6u\n", i, j, cache[i].tags[j], cache[i].locations[j]);
+    }
+  }
+}
+
+
+uint16_t get_hash(const char *s) {
+  //(((src[0] - '.') * 256 + (src[1] - '.') * 16 + src[2] - '.') ^ ((src[3] - '.') << 6) ^ ((src[4] - '.') << 10) )
+  //return ((s[0] - '.') * 251 ^ (s[1] - '.') * 17 ^ s[2] - '.');
+  int hash = 0, i;
+  for (i = 0; i < 3; i++) {
+    hash = hash + ((hash) << 5) + *(s + i) + ((*(s + i)) << 7);
+  }
+
+  return ((hash) ^ (hash >> 16)) & 0xffff;
+}
 
 size_t compress(uchar_t *s_start, uchar_t *d_start, size_t s_len, uint16_t *lempel_table, int lempel_table_size) {
   uchar_t *src = s_start;
@@ -115,12 +179,12 @@ size_t compress(uchar_t *s_start, uchar_t *d_start, size_t s_len, uint16_t *lemp
   uchar_t *cpy, *copymap;
   int copymask = 1 << (NBBY8 - 1);
   int mlen, offset;
-  uint16_t *hp;
+  uint16_t hp;
   //uint16_t lempel[LEMPEL_SIZE]; /* uninitialized; see above */
 
   while (src < (uchar_t *) s_start + s_len) {
     if ((copymask <<= 1) == (1 << NBBY8)) {
-      if (dst >= (uchar_t *) d_start + s_len - 1 - 2 * NBBY8) {
+      if (dst >= (uchar_t *) d_start + s_len - 1 - 2 * NBBY8) { // if we cannot compress then return the source as it is!?
         mlen = s_len;
         for (src = s_start, dst = d_start; mlen; mlen--)
           *dst++ = *src++;
@@ -134,9 +198,28 @@ size_t compress(uchar_t *s_start, uchar_t *d_start, size_t s_len, uint16_t *lemp
       *dst++ = *src++;
       continue;
     }
-    hp = &lempel_table[((src[0] + 13) ^ (src[1] - 13) ^ src[2]) & (lempel_table_size - 1)];
-    offset = (intptr_t)(src - *hp) & OFFSET_MASK;
-    *hp = (uint16_t) (uintptr_t) src;
+    uint16_t index = get_hash(src) & (511);
+    if(!strncmp(src, "[80", 3)) {
+      printf("\n");
+    }
+    if(!cache_lookup(index, src, &hp)) {
+      cache_insert(index, src, (uint16_t) (uintptr_t) src);
+    }
+    //hp = &lempel_table[index];
+    offset = (intptr_t)(src - hp) & OFFSET_MASK;
+    /*
+    if(*hp != (uint16_t) (uintptr_t) src) {
+      lempel_table_collisions[index] ++;
+      lempel_table_values[index][0] = src[0] == '\n' ? 'n' : src[0];
+      lempel_table_values[index][1] = src[1] == '\n' ? 'n' : src[1];
+      lempel_table_values[index][2] = src[2] == '\n' ? 'n' : src[2];
+      lempel_table_values[index][3] = src[3] == '\n' ? 'n' : src[3];
+      lempel_table_values[index][4] = src[4] == '\n' ? 'n' : src[4];
+      lempel_table_values[index][5] = 0;
+    }
+    */
+
+
     cpy = src - offset;
     if (cpy >= (uchar_t *) s_start && cpy != src && src[0] == cpy[0]
         && src[1] == cpy[1] && src[2] == cpy[2]) {
@@ -243,18 +326,24 @@ sed -i 's/[^0-9. ]//g;s/     / /g;s/    / /g;s/   / /g;s/  / /g;s/^ //;s/ $//;' 
 
 
 
-/*
+
 #include <stdio.h>
 #include <string.h>
 
 #include <sys/time.h>
 #include <ctype.h>
+#include <sys/types.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+typedef unsigned char uchar_t;
 
-#define BUFFER_SIZE 2000
+#define BUFFER_SIZE 8000
 char s_buffer[BUFFER_SIZE+1];
 char d_buffer[BUFFER_SIZE+1];
-#define LEMPEL_SIZE2 128
-uint16_t lempel[LEMPEL_SIZE2];
+#define LEMPEL_SIZE2 4096
+uint16_t lempel_table[LEMPEL_SIZE2] ={0};
+int lempel_table_size = LEMPEL_SIZE2;
 
 char u_buffer[BUFFER_SIZE+1];
 
@@ -292,7 +381,7 @@ int main(int argc, char *argv[]) {
         //s_buffer[i] = toupper(s_buffer[i]);
       }
       int d_len;
-      d_len = compress((uchar_t *) s_buffer, (uchar_t *) d_buffer, s_len, lempel, LEMPEL_SIZE2);
+      d_len = compress((uchar_t *) s_buffer, (uchar_t *) d_buffer, s_len, lempel_table, LEMPEL_SIZE2);
       //s_buffer[s_len] = '\0';
       //printf ("%s", s_buffer);
       //printf("%d\n", d_len);
@@ -302,6 +391,8 @@ int main(int argc, char *argv[]) {
 
       fwrite(u_buffer, 1, u_len, u_file);
     }
+    print_table(lempel_table, lempel_table_size);
+    print_cache();
 
     gettimeofday(&t2, NULL);
     fprintf(stderr, "Finished in about %.0f milliseconds. \n", (t2.tv_sec - t1.tv_sec) * 1000.0 + (t2.tv_usec - t1.tv_usec) / 1000.0);
@@ -314,5 +405,5 @@ int main(int argc, char *argv[]) {
   
   return 0;	
 }
-*/
+
 
