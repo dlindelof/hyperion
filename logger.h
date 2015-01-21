@@ -31,7 +31,7 @@ extern "C" {
 
 // the LogWriter is a function that needs to be registered in the logger
 // to be able to write a buffer of byte into persistent memory
-typedef void (*LogWriter)(const uint8_t *data, const size_t size);
+typedef int (*LogWriter)(const char *data, const unsigned int length);
 
 typedef enum {
   SEVERITY_VERBOSE,
@@ -41,21 +41,25 @@ typedef enum {
   SEVERITY_WARNING,
   SEVERITY_ERROR,
   SEVERITY_FATAL
-} log_severity_t;
+} LogSeverity;
 
 typedef struct {
   uint16_t id;
-  log_severity_t severity;
+  LogSeverity severity;
   const char * const message;
 } LogEntry;
 
 void logger_register_log_entries(LogEntry *entries, int count);
-void logger_register_log_writer(LogWriter writer, int is_compressed, log_severity_t severity);
+void logger_register_log_writer(LogWriter writer, LogSeverity severity, int is_compressed);
 
 void logger_log(uint16_t id, ...);
-void logger_severity_log(log_severity_t severity, uint16_t id, ...);
+void logger_severity_log(LogSeverity severity, uint16_t id, ...);
 void logger_printf(const char * format, ...);
-void logger_severity_printf(log_severity_t severity, const char * format, ...);
+void logger_severity_printf(LogSeverity severity, const char * format, ...);
+void logger_printf_with_id(uint16_t id, const char * format, ...);
+void logger_severity_printf_with_id(LogSeverity severity, uint16_t id, const char * format, ...);
+
+int logger_decode(char *destination, int destination_length, const char *source, int *source_length);
 
 #ifdef __cplusplus
 }

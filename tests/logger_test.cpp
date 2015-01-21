@@ -1,5 +1,6 @@
 //#include "neurobat.h"
 #include "logger.h"
+#include "common.h"
 
 extern "C"
 {
@@ -9,6 +10,12 @@ extern "C"
 
 #include "../logger.c"
 }
+
+#define BUFSIZE (1024)
+
+
+
+
 
 //CppUTest includes should be after your and system includes
 #include "CppUTest/TestHarness.h"
@@ -102,7 +109,6 @@ TEST(LOGGER_LOG_ENTRIES, Logger_DoNotFindEntry_ReturnsNULL) {
   entry = logger_find_log_entry(TEST_LOG_STRING_WITH_PARAMETERS_2);
   POINTERS_EQUAL(NULL, entry);
 
-  //printf("% d %", 1);
 }
 
 
@@ -117,28 +123,28 @@ TEST(LOGGER_PRINTF, Logger_GetNextSpecifier_ReturnsTheSpecifier) {
   char *fmt = format;
   int n;
 
-  n = logger_get_next_specifier(&fmt);
+  n = logger_find_next_specifier(&fmt);
   STRNCMP_EQUAL("%s", fmt, n);
   fmt += n;
-  n = logger_get_next_specifier(&fmt);
+  n = logger_find_next_specifier(&fmt);
   STRNCMP_EQUAL("%#0+-33.33f", fmt, n);
   fmt += n;
-  n = logger_get_next_specifier(&fmt);
+  n = logger_find_next_specifier(&fmt);
   STRNCMP_EQUAL("%c", fmt, n);
   fmt += n;
-  n = logger_get_next_specifier(&fmt);
+  n = logger_find_next_specifier(&fmt);
   STRNCMP_EQUAL("%s", fmt, n);
   fmt += n;
-  n = logger_get_next_specifier(&fmt);
+  n = logger_find_next_specifier(&fmt);
   STRNCMP_EQUAL("%12i", fmt, n);
   fmt += n;
-  n = logger_get_next_specifier(&fmt);
+  n = logger_find_next_specifier(&fmt);
   STRNCMP_EQUAL("% X", fmt, n);
   fmt += n;
-  n = logger_get_next_specifier(&fmt);
+  n = logger_find_next_specifier(&fmt);
   STRNCMP_EQUAL("%.12F", fmt, n);
   fmt += n;
-  n = logger_get_next_specifier(&fmt);
+  n = logger_find_next_specifier(&fmt);
   STRNCMP_EQUAL("%# -+12p", fmt, n);
 }
 
@@ -147,7 +153,7 @@ TEST(LOGGER_PRINTF, Logger_GetNextSpecifierFromStringWithNoSpecifier_ReturnsZero
   char *fmt = format;
   int n;
 
-  n = logger_get_next_specifier(&fmt);
+  n = logger_find_next_specifier(&fmt);
   CHECK_EQUAL(0, n);
 }
 
@@ -155,7 +161,6 @@ TEST(LOGGER_PRINTF, Logger_GetNextSpecifierFromStringWithNoSpecifier_ReturnsZero
 
 
 
-#define BUFSIZE (256)
 
 TEST_GROUP(LOGGER_PRINTF_ENTRY) {
 
@@ -209,46 +214,46 @@ TEST(LOGGER_PRINTF_ENTRY, Logger_PrintStringWithParameters_PrintsFormattedString
   n = logger_snvprintf_entry_test_helper(buffer, BUFSIZE, 42, 0, 0, "Text with %c %s %5.2f, %d, and %#X", 'A', "String and", 12.2, 42, 42);
   STRNCMP_EQUAL("[0X002A] Text with A String and 12.20, 42, and 0X2A\n", buffer, n);
   n = logger_snvprintf_entry_test_helper(buffer, BUFSIZE, 42, 0, 0, "Text with %c %s %c %s", '|', "|||", 0, "");
-  STRNCMP_EQUAL("[0X002A] Text with ! !!! \0\n", buffer, n);
+  STRNCMP_EQUAL("[0X002A] Text with ! !!! 0 \n", buffer, n);
   n = logger_snvprintf_entry_test_helper(buffer, BUFSIZE, 42, 0, 0, "Text with %c %s", '\n', "   ");
   STRNCMP_EQUAL("[0X002A] Text with \r    \n", buffer, n);
 }
 
 TEST(LOGGER_PRINTF_ENTRY, Logger_PrintCompressedEmptyString_PrintsEmptyStringAddsIdAndNewLineAddsSeparators) {
   n = logger_snvprintf_entry(buffer, BUFSIZE, 42, 1, 0, "", none);
-  STRNCMP_EQUAL("[002A||\n", buffer, n);
+  STRNCMP_EQUAL("002A||\n", buffer, n);
 }
 
 TEST(LOGGER_PRINTF_ENTRY, Logger_PrintCompressedString_PrintsStringAddsIdAndNewLineAddsSeparators) {
   n = logger_snvprintf_entry(buffer, BUFSIZE, 42, 1, 0, "Text with no parameters [0x00] does not matter what is inside", none);
-  STRNCMP_EQUAL("[002A|Text with no parameters [0x00] does not matter what is inside|\n", buffer, n);
+  STRNCMP_EQUAL("002A|Text with no parameters [0x00] does not matter what is inside|\n", buffer, n);
 }
 
 TEST(LOGGER_PRINTF_ENTRY, Logger_PrintCompressedStringWithSpecialCharacters_PrintsStringReplacesSpecialCharacters) {
   n = logger_snvprintf_entry(buffer, BUFSIZE, 42, 1, 0, "||\n\n||", none);
-  STRNCMP_EQUAL("[002A|!!\r\r!!|\n", buffer, n);
+  STRNCMP_EQUAL("002A|!!\r\r!!|\n", buffer, n);
 }
 
 TEST(LOGGER_PRINTF_ENTRY, Logger_PrintCompressedStringWithFormatting_PrintsFormatterString) {
   n = logger_snvprintf_entry_test_helper(buffer, BUFSIZE, 42, 1, 0, "Text with %c %s %d", 'A', "string", 2);
-  STRNCMP_EQUAL("[002A|Text with A string 2|\n", buffer, n);
+  STRNCMP_EQUAL("002A|Text with A string 2|\n", buffer, n);
 }
 
 TEST(LOGGER_PRINTF_ENTRY, Logger_PrintEncodedEmptyString_PrintsStringAddsIdAndNewLineAddsSeparators) {
   n = logger_snvprintf_entry_test_helper(buffer, BUFSIZE, 42, 1, 1, "");
-  STRNCMP_EQUAL("[002A|\n", buffer, n);
+  STRNCMP_EQUAL("002A|\n", buffer, n);
 }
 
 TEST(LOGGER_PRINTF_ENTRY, Logger_PrintEncodedString_PrintsStringAddsIdAndNewLineAddsSeparators) {
   n = logger_snvprintf_entry_test_helper(buffer, BUFSIZE, 42, 1, 1, "Text with no parameters");
-  STRNCMP_EQUAL("[002A|\n", buffer, n);
+  STRNCMP_EQUAL("002A|\n", buffer, n);
 }
 
 TEST(LOGGER_PRINTF_ENTRY, Logger_PrintEncodedStringWithParameters_PrintsFormattedString) {
   n = logger_snvprintf_entry_test_helper(buffer, BUFSIZE, 42, 1, 1, "Text with character: %c string: %s integer: %d float: %5.2f", 'Z', "blah blah", 42, 3.14);
-  STRNCMP_EQUAL("[002A|Z|blah blah|42| 3.14|\n", buffer, n);
+  STRNCMP_EQUAL("002A|Z|blah blah|42| 3.14|\n", buffer, n);
   n = logger_snvprintf_entry_test_helper(buffer, BUFSIZE, 42, 1, 1, "Text with special character: %c string: %s", '\n', "\n||");
-  STRNCMP_EQUAL("[002A|\r|\r!!|\n", buffer, n);
+  STRNCMP_EQUAL("002A|\r|\r!!|\n", buffer, n);
 }
 
 
@@ -279,9 +284,166 @@ TEST_GROUP(LOGGER_DECODE) {
 };
 
 TEST(LOGGER_DECODE, Logger_DecodeId_ReturnsId) {
-  CHECK_EQUAL(42, logger_decode_get_id("[002A"));
-  CHECK_EQUAL(42, logger_decode_get_id("[002a"));
-  CHECK_EQUAL(0, logger_decode_get_id("[0000"));
-  CHECK_EQUAL(0xfFFf, logger_decode_get_id("[ffff"));
+  CHECK_EQUAL(42, logger_decoder_get_id("002A"));
+  CHECK_EQUAL(42, logger_decoder_get_id("002a"));
+  CHECK_EQUAL(0, logger_decoder_get_id("0000"));
+  CHECK_EQUAL(0xfFFf, logger_decoder_get_id("ffff"));
 }
+
+
+
+/*
+ * Log writing & reading mock
+ */
+
+class LogStorage {
+  char buffer[BUFSIZE];
+
+public:
+  LogStorage() {
+    strcpy(buffer, "");
+  }
+
+  void write(const char *data, int length) {
+    int i = strlen(buffer);
+    char * buf = &buffer[i];
+    strcat(buf, data);
+    buf[length] = 0;
+  }
+
+  void read(char *data) {
+    strcpy(data, buffer);
+    strcpy(buffer, "");
+  }
+};
+
+LogStorage logger1;
+
+int log_writer_function_1(const char * data, const unsigned int length) {
+  logger1.write(data, length);
+  return length;
+}
+
+
+TEST_GROUP(LOGGER_LOG) {
+  char buffer[BUFSIZE];
+
+  void setup() {
+  }
+
+  void teardown() {
+    log_entries_count = 0;
+    log_writers_count = 0;
+  }
+
+};
+
+TEST(LOGGER_LOG, Logger_RegisterLogWriter_RegistersLogWriter) {
+  logger_register_log_writer(log_writer_function_1, SEVERITY_NORMAL, 0);
+  CHECK_EQUAL(1, log_writers_count);
+  logger_register_log_writer(log_writer_function_1, SEVERITY_VERBOSE, 0);
+  CHECK_EQUAL(2, log_writers_count);
+  CHECK(log_writers_count == 2);
+}
+
+TEST(LOGGER_LOG, Logger_printf_LogsTheString) {
+  logger_register_log_writer(log_writer_function_1, SEVERITY_NORMAL, 0);
+
+  logger_printf("this is a test");
+  logger1.read(buffer);
+  STRCMP_EQUAL("[0X0000] this is a test\n", buffer);
+}
+
+TEST(LOGGER_LOG, Logger_SeverityCheck_SeverityIsWorking) {
+  logger_register_log_writer(log_writer_function_1, SEVERITY_NORMAL, 0);
+  logger_register_log_writer(log_writer_function_1, SEVERITY_VERBOSE, 0);
+
+  logger_severity_printf(SEVERITY_DEBUG, "this is a test");
+  logger1.read(buffer);
+  STRCMP_EQUAL("[0X0000] this is a test\n", buffer);
+}
+
+TEST(LOGGER_LOG, Logger_printfWithParam_LogsTheFormattedString) {
+  logger_register_log_writer(log_writer_function_1, SEVERITY_NORMAL, 0);
+  logger_register_log_writer(log_writer_function_1, SEVERITY_VERBOSE, 0);
+
+  logger_printf("Text with string %s", "works");
+  logger1.read(buffer);
+  STRCMP_EQUAL("[0X0000] Text with string works\n[0X0000] Text with string works\n", buffer);
+
+  logger_severity_printf_with_id(SEVERITY_VERBOSE, 42, "Various parameters %d %c %5.2f", 42, 'A', 23.0);
+  logger1.read(buffer);
+  STRCMP_EQUAL("[0X002A] Various parameters 42 A 23.00\n", buffer);
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+TEST_GROUP(LOGGER_HELPER_FUNCTIONS) {
+
+  char dst[100];
+
+  void setup() {
+  }
+
+  void teardown() {
+  }
+
+};
+
+TEST(LOGGER_HELPER_FUNCTIONS, memnmcpy_CopyZeroBytes_CopiesNothingAndAppendsNullIfEnoughSpace) {
+  memnmcpy(dst, "this is a test.", 0, 100);
+  STRCMP_EQUAL("", dst);
+}
+
+TEST(LOGGER_HELPER_FUNCTIONS, memnmcpy_CopySomeBytes_CopiesBytesAppendsNullIfEnoughSpace) {
+  memnmcpy(dst, "this is a test.", 5, 100);
+  STRCMP_EQUAL("this ", dst);
+}
+
+TEST(LOGGER_HELPER_FUNCTIONS, memnmcpy_CopySomeBytes_CopiesBytesDoesNotAppendNullIfNotEnoughSpace) {
+  strcpy(dst, "some random value");
+  memnmcpy(dst, "this is a test.", 5, 5);
+  STRCMP_EQUAL("this random value", dst);
+}
+
+TEST(LOGGER_HELPER_FUNCTIONS, memnmcpy_CopyWhenMaxIsLessThanN_CopiesMaxBytes) {
+  strcpy(dst, "some random value");
+  memnmcpy(dst, "this is a test.", 5, 2);
+  STRCMP_EQUAL("thme random value", dst);
+}
+
+TEST(LOGGER_HELPER_FUNCTIONS, memnmcpy_CopyWithNegativeN_CopiesNothing) {
+  strcpy(dst, "some random value");
+  memnmcpy(dst, "this is a test.", -1, 5);
+  STRCMP_EQUAL("some random value", dst);
+}
+
+TEST(LOGGER_HELPER_FUNCTIONS, memnmcpy_CopyWithNegativeMax_CopiesNothing) {
+  strcpy(dst, "some random value");
+  memnmcpy(dst, "this is a test.", 5, -1);
+  STRCMP_EQUAL("some random value", dst);
+}
+
+
+
+
+
+
+
+
 
