@@ -18,8 +18,8 @@ struct Dictionary;
 int main(int argc, char *argv[]) {
 
   Dictionary dictionary;
-  char s_buffer[BUFFER_SIZE];
-  char d_buffer[BUFFER_SIZE];
+  uint8_t s_buffer[BUFFER_SIZE];
+  uint8_t d_buffer[BUFFER_SIZE];
   unsigned long codecount = 0, textcount = 0;
   struct timeval t1, t2;
   FILE *s_file, *d_file;
@@ -41,31 +41,31 @@ int main(int argc, char *argv[]) {
 
   gettimeofday(&t1, NULL);
 
-  dictionray_init(&dictionary);
+  dictionary_init(&dictionary);
 
-  int s_len;
-  int len;
-  char *s_buffer_start = s_buffer; // used to adjust the input buffer when the s_len is not zero
-  int packet_len = PACKET_SIZE;
+  size_t s_len;
+  size_t len;
+  long packet_len = PACKET_SIZE;
 
-  int bytes_read;
+  size_t bytes_read;
 
   const int compressing = strcmp(argv[1], "c") == 0;
 
-  while((bytes_read = fread(s_buffer_start, 1, BUFFER_SIZE - s_len, s_file)) > 0 || s_len > 0) {
-    s_len += bytes_read;
-    const int original_s_len = s_len;
+  size_t s_unused_bytes = 0;
+
+  while((bytes_read = fread(s_buffer + s_unused_bytes, 1, BUFFER_SIZE - s_unused_bytes, s_file)) > 0 || s_len > 0) {
+    s_len = bytes_read + s_unused_bytes;
 
     if(PACKET_SIZE == 0) { // disable packeting
       packet_len = BUFFER_SIZE;
     }
 
     if(compressing) {
-      len = compress(&dictionary, d_buffer, BUFFER_SIZE, s_buffer, &s_len, packet_len);
+      len = compress(&dictionary, d_buffer, BUFFER_SIZE, s_buffer, s_len, &s_unused_bytes, packet_len);
       packet_len -= len;
     } else {
-      len = decompress(&dictionary, d_buffer, BUFFER_SIZE, s_buffer, &s_len, packet_len);
-      packet_len -= original_s_len - s_len;
+      len = decompress(&dictionary, d_buffer, BUFFER_SIZE, s_buffer, s_len, &s_unused_bytes, packet_len);
+      packet_len -= s_len - s_unused_bytes;
     }
 
     fwrite(d_buffer, 1, len, d_file);
@@ -73,28 +73,20 @@ int main(int argc, char *argv[]) {
     textcount += bytes_read;
     codecount += len;
 
-    //printf("bytes_read: %3d, original_s_len: %3d, s_len: %3d, packet_len: %4d\n", bytes_read, original_s_len, s_len, packet_len);
-    //printf("bytes_read: %3d, s_len: %3d, packet_len: %4d\n", bytes_read, s_len, packet_len);
     assert(packet_len >= 0);
 
     if(packet_len == 0) {
       packet_len = PACKET_SIZE;
-      dictionray_init(&dictionary);
+      dictionary_init(&dictionary);
     }
 
-    if(s_len != 0) { // some bytes are unused; copy them to be decompressed next.
-      memmove(s_buffer, s_buffer + original_s_len - s_len, s_len);
-      s_buffer_start = s_buffer + s_len;
-    } else {
-      // reset src just in case if it was assigned before
-      s_buffer_start = s_buffer;
-    }
+    memmove(s_buffer, s_buffer + s_len - s_unused_bytes, s_unused_bytes); // copy unused bytes to be decompressed next
   }
 
   gettimeofday(&t2, NULL);
-  fprintf(stderr, "Finished in about %.0f milliseconds. \n", (t2.tv_sec - t1.tv_sec) * 1000.0 + (t2.tv_usec - t1.tv_usec) / 1000.0);
-  printf("text:  %ld bytes\n", textcount);
-  printf("code:  %ld bytes (%ld%%)\n", codecount, (codecount * 100) / textcount);
+  //fprintf(stderr, "Finished in about %.0f milliseconds. \n", (t2.tv_sec - t1.tv_sec) * 1000.0 + (t2.tv_usec - t1.tv_usec) / 1000.0);
+  //printf("text:  %ld bytes\n", textcount);
+  //printf("code:  %ld bytes (%ld%%)\n", codecount, (codecount * 100) / textcount);
 
   fclose(d_file);
   fclose(s_file);

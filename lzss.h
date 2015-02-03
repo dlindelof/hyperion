@@ -21,14 +21,14 @@ extern "C" {
 #define LOOKAHEAD_SIZE ((1 << MATCH_BITS) + THRESHOLD - 1) // lookahead buffer size
 
 typedef struct {
-  char buffer[DICTIONARY_SIZE];
-  unsigned int tail;
+  uint8_t buffer[DICTIONARY_SIZE];
+  size_t tail;
 } Dictionary;
 
-void dictionray_init(Dictionary *dictionary);
+void dictionary_init(Dictionary *dictionary);
 
-int compress(Dictionary *dictionary, char *dst, int d_len, const char *src, int *s_len, int packet_len);
-int decompress(Dictionary *dictionary, char *dst, int d_len, const char *src, int *s_len, int packet_len);
+size_t compress(Dictionary *dictionary, uint8_t *dst, size_t d_len, const uint8_t *src, size_t s_len, size_t *s_unused_bytes, size_t d_remaining_packet_len);
+size_t decompress(Dictionary *dictionary, uint8_t *dst, size_t d_len, const uint8_t *src, size_t s_len, size_t *s_unused_bytes, size_t s_remaining_packet_len);
 
 
 #ifdef __cplusplus

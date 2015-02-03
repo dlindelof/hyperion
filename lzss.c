@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <stdint.h>
 
 #include "lzss.h"
 
@@ -40,15 +41,13 @@
 
 static int first_was_2 = 0;
 
-static inline int minimum(int a, int b) {
-  return a <= b ? a : b;
-}
+#define MINIMUM(_a_,_b_) (((_a_) <= (_b_)) ? (_a_) : (_b_))
 
 /*
  * functions for writing/reading to/from the byte stream.
  */
 
-static int write_literal(char *dst, int d_len, char c) {
+static size_t write_literal(uint8_t *dst, size_t d_len, uint8_t c) {
   if(c & 128) {
     if(d_len >= 2) {
       *dst ++ = c;
@@ -63,9 +62,9 @@ static int write_literal(char *dst, int d_len, char c) {
   return 0;
 }
 
-static int write_two_literals(char *dst, int d_len, char c1, char c2) {
-  char tmp[4];
-  int len = write_literal(tmp, 4, c1);
+static size_t write_two_literals(uint8_t *dst, size_t d_len, uint8_t c1, uint8_t c2) {
+  uint8_t tmp[4];
+  size_t len = write_literal(tmp, 4, c1);
   first_was_2 = len == 2 ? 1 : 0;
   len += write_literal(&tmp[len], 4 - len, c2);
   if(len <= d_len) {
@@ -75,28 +74,30 @@ static int write_two_literals(char *dst, int d_len, char c1, char c2) {
   return 0;
 }
 
-static int write_copy(char *dst, int d_len, int position, int match_length) {
+static size_t write_copy(uint8_t *dst, size_t d_len, unsigned int position, unsigned int match_length) {
   assert(match_length > THRESHOLD && match_length <= LOOKAHEAD_SIZE);
   if(d_len >= 2) {
     match_length -= THRESHOLD;
-    char c = 128;
-    c |= (char)(position >> 4);
+    uint8_t c = 128;
+    c |= (uint8_t)(position >> 4);
     *dst ++ = c;
-    c = (char)((position << 4) & 0x0f0) | (match_length & 0x0f);
+    c = (uint8_t)((position << 4) & 0x0f0) | (match_length & 0x0f);
     *dst = c;
     return 2;
   }
   return 0;
 }
 
-static int read_literal_or_copy(const char *buffer, int length, char *character, int *position, int *match_length) {
+static size_t read_literal_or_copy(const uint8_t *buffer, size_t length, uint8_t *character, unsigned int *position, unsigned int *match_length) {
   *match_length = 0;
+  *position = 0;
+  *character = 0;
   if(length >= 1) {
-    char c1 = *buffer;
+    uint8_t c1 = *buffer;
     if(c1 & 128) { // non-ASCII literal or copy
       if(length >= 2) {
         buffer ++;
-        char c2 = *buffer;
+        uint8_t c2 = *buffer;
         *match_length = c2 & 0x0f;
         if(*match_length == 0) { // non-ASCII literal ( > 127)
           *character = c1;
@@ -124,9 +125,9 @@ static int read_literal_or_copy(const char *buffer, int length, char *character,
  * functions for working with dictionaries.
  */
 
-static void dictionary_copy_from_buffer(Dictionary *dictionary, const char *s, int n) {
+static void dictionary_copy_from_buffer(Dictionary *dictionary, const uint8_t *s, unsigned int n) {
   assert(n <= DICTIONARY_SIZE);
-  int i = dictionary->tail;
+  size_t i = dictionary->tail;
   while(n) {
     ++ i;
     i %= DICTIONARY_SIZE;
@@ -136,7 +137,7 @@ static void dictionary_copy_from_buffer(Dictionary *dictionary, const char *s, i
   dictionary->tail = i;
 }
 
-static void dictionary_copy_to_buffer(Dictionary *dictionary, char *buf, int position, int n) {
+static void dictionary_copy_to_buffer(Dictionary *dictionary, uint8_t *buf, unsigned int position, unsigned int n) {
   assert(position <= DICTIONARY_SIZE);
   while(n) {
     *buf ++ = dictionary->buffer[position];
@@ -146,17 +147,17 @@ static void dictionary_copy_to_buffer(Dictionary *dictionary, char *buf, int pos
   }
 }
 
-static char dictionary_get_at(Dictionary *dictionary, int index) {
+static uint8_t dictionary_get_at(Dictionary *dictionary, unsigned int index) {
   return dictionary->buffer[index % DICTIONARY_SIZE];
 }
 
-static int dictionary_find_lonest_match(Dictionary *dictionary, const char *src, int max, int *position) {
-  int m = 0;
-  int i = dictionary->tail;
-  int c = DICTIONARY_SIZE;
+static int dictionary_find_lonest_match(Dictionary *dictionary, const uint8_t *src, unsigned int max, unsigned int *position) {
+  unsigned int m = 0;
+  size_t i = dictionary->tail;
+  unsigned int c = DICTIONARY_SIZE;
   while(c) {
     if(dictionary->buffer[i] == *src) {
-      int j;
+      size_t j;
       for(j = 1; j < max; j ++) {
         if(dictionary_get_at(dictionary,(i+j)) != src[j]) {
           break;
@@ -180,10 +181,12 @@ static int dictionary_find_lonest_match(Dictionary *dictionary, const char *src,
  * public functions.
  */
 
-void dictionray_init(Dictionary *dictionary) {
+void dictionary_init(Dictionary *dictionary) {
+  /*
+   * initial content of the dictionary must be consistent across
+   * firmwares. do not change this line.
+   */
   memset(dictionary->buffer, 0, DICTIONARY_SIZE);
-  //const char *ss = "|00.01|02.03|04.05|06.07|08.09|10.11|12.13|14.15|16.17|18.19|20.21|22.23|24.25|26.27|28.29|30.31|32.33|34.35|36.37|38.39|40.41|42.43|44.45|46.47|48.49|50.51|52.53|54.55|56.57|58.59|60.61|62.63|64.65|66.67|68.69|70.71|72.73|74.75|76.77|78.79|80.81|82.83|84.85|86.87|88.89|90.91|92.93|94.95|96.97|98.99|";
-  //strncpy(dictionary->buffer, ss, DICTIONARY_SIZE);
 
   dictionary->tail = DICTIONARY_SIZE - 1;
 }
@@ -194,16 +197,15 @@ void dictionray_init(Dictionary *dictionary) {
  * update s_len to the number of unused bytes in the source.
  * return the number of bytes written into the destination.
  */
+size_t compress(Dictionary *dictionary, uint8_t *dst, size_t d_len, const uint8_t *src, size_t s_len, size_t *s_unused_bytes, size_t d_remaining_packet_len) {
+  const uint8_t *original_dst = dst;
+  unsigned int position = 0, m = 0, max = 0;
 
-int compress(Dictionary *dictionary, char *dst, int d_len, const char *src, int *s_len, int packet_len) {
-  const char *original_dst = dst;
-  int position, m, max;
-  int s_length = *s_len;
-  d_len = minimum(d_len, packet_len);
+  d_len = MINIMUM(d_len, d_remaining_packet_len);
     
-  while(s_length > 0) {
-    int len;
-    max = minimum(LOOKAHEAD_SIZE, s_length);
+  while(s_len > 0) {
+    unsigned int len;
+    max = MINIMUM(LOOKAHEAD_SIZE, s_len);
     m = dictionary_find_lonest_match(dictionary, src, max, &position);
 
     if(m == 0 || m == 1) { // symbol is not in the dictionary or is a literal
@@ -221,53 +223,54 @@ int compress(Dictionary *dictionary, char *dst, int d_len, const char *src, int 
         m = len == 0 ? 0 : 1;
         dst += len;
         d_len -= len;
-        packet_len -= len;
+        d_remaining_packet_len -= len;
         dictionary_copy_from_buffer(dictionary, src, m);
         src += m;
-        s_length -= m;
+        s_len -= m;
       }
-      if(packet_len == 1 && d_len >= 1) { // if packet is not filled yet then write a filler
+      if(d_remaining_packet_len == 1 && d_len >= 1) { // if packet is not filled yet then write a filler
         *dst ++ = 0xff;
         d_len --;
-        packet_len --;
+        d_remaining_packet_len --;
       }
       break;
     } else {
       dst += len;
       d_len -= len;
-      packet_len -= len;
+      d_remaining_packet_len -= len;
       dictionary_copy_from_buffer(dictionary, src, m);
       src += m;
-      s_length -= m;
+      s_len -= m;
     }
   }
 
-  *s_len = s_length;
+  *s_unused_bytes = s_len;
   return dst - original_dst;
 }
 
 /*
  * decompress the source and write in destination.
  * do not decompress more than packet_len.
- * update s_len to the number of unused bytes in the source.
+ * update s_unused_bytes to the number of unused bytes in the source.
  * return the number of bytes written into the destination.
  */
 
-int decompress(Dictionary *dictionary, char *dst, int d_len, const char *src, int *s_len, int packet_len) {
-  const char *original_dst = dst;
-  int position, m, len;
-  char character;
-  int s_length = minimum(*s_len, packet_len);
-  int bytes_decmopressed = 0;
+size_t decompress(Dictionary *dictionary, uint8_t *dst, size_t d_len, const uint8_t *src, size_t s_len, size_t *s_unused_bytes, size_t s_remaining_packet_len) {
+  const uint8_t *original_dst = dst;
+  const size_t original_s_len = s_len;
+  unsigned int position, m, len;
+  uint8_t character;
+  size_t bytes_decmopressed = 0;
 
-  while(s_length > 0) {
-    len = read_literal_or_copy(src, s_length, &character, &position, &m);
+  s_len = MINIMUM(s_len, s_remaining_packet_len);
+
+  while(s_len > 0) {
+    len = read_literal_or_copy(src, s_len, &character, &position, &m);
     if(len != 0 && d_len >= m) {
-      if(m == 0) {
-        assert(len == 1);
-        if(packet_len == 1) { // a filler, ignore it
-          assert(character == (char)0x0ff);
-        } else if(s_length == 1) { // first bye of a copy
+      if(m == 0) { // len must be 1
+        if(s_remaining_packet_len == 1) {
+          // a filler, ignore it
+        } else if(s_len == 1) { // first byte of a copy
           break;
         }
       } else if(len == 1 || (len == 2 && m == 1)) { // literal
@@ -278,8 +281,8 @@ int decompress(Dictionary *dictionary, char *dst, int d_len, const char *src, in
         dictionary_copy_from_buffer(dictionary, dst, m);
       }
       src += len;
-      s_length -= len;
-      packet_len -= len;
+      s_len -= len;
+      s_remaining_packet_len -= len;
       bytes_decmopressed += len;
       dst += m;
       d_len -= m;
@@ -288,6 +291,6 @@ int decompress(Dictionary *dictionary, char *dst, int d_len, const char *src, in
     }
   }
 
-  *s_len -= bytes_decmopressed;
+  *s_unused_bytes = original_s_len - bytes_decmopressed;
   return dst - original_dst;
 }

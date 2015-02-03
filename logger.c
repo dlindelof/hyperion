@@ -9,13 +9,30 @@
 typedef struct {
   LogWriter writer;
   LogSeverity severity;
-  int is_compressed;
+  bool is_encoded;
 } LogWriterInfo;
 
 typedef struct {
   LogEntry *entries;
-  int count;
+  size_t count;
 } LogEntryGroup;
+
+/*
+ * use logger_log when a log entry is frequently used in NiQ.
+ * use logger_printf for temporary logging or entries that are
+ * not logger frequently.
+ *
+ * each log entry must be less than LOG_LINE_SIZE or otherwise
+ * it gets truncated.
+ * logger uses some special characters that if are used in a log entry
+ * will get replaced: '|', '\n', and '\0' will be replaced by
+ * '!', '\r', '0' respectively.
+ *
+ * a maximum of MAX_LOG_WRITERS log writers and MAX_LOG_ENTRIES log
+ * entries are supported by the logger.
+ *
+ * to add a new log entry add it to 'logger.def' file.
+ */
 
 /*
  * supported formatting is a subset of standard c printf:
@@ -30,15 +47,9 @@ typedef struct {
 
 #define MAX_LOG_WRITERS ((int) 4)
 #define MAX_LOG_ENTRIES ((int) 6)
-#define MAX_LOG_LINE_SIZE ((int) 128)
 #define MAX_LOG_FORMATTING_SIZE ((int) 12) // %[flag][flag][flag][flag][digit][digit].[digit][digit][specifier]\0
 
-
-static LogEntryGroup log_entries[MAX_LOG_ENTRIES];
-static int log_entries_count = 0;
-
-static LogWriterInfo log_writers[MAX_LOG_WRITERS];
-static int log_writers_count = 0;
+#define LOG_LINE_SIZE ((int) 128)
 
 
 static const int ERROR_BUFFER_OVERFLOW = -1;
@@ -46,9 +57,79 @@ static const int ERROR_FORMATTING      = -2;
 static const int ERROR_DECODING        = -3;
 
 
-static LogEntry* logger_find_log_entry_in_entries(uint16_t id, LogEntryGroup *log_entries) {
-  int i;
+static LogEntryGroup log_entries[MAX_LOG_ENTRIES];
+static unsigned int log_entries_count = 0;
 
+static LogWriterInfo log_writers[MAX_LOG_WRITERS];
+static unsigned int log_writers_count = 0;
+
+static LogEntry all_log_entries[] = {
+#define LOG_ENTRY(_id_, _value_, _format_) { .id = _id_, .format = _format_},
+#include "logger.defs"
+#undef LOG_ENTRY
+};
+
+static bool initialized = false;
+
+/*
+ * general helper functions
+ */
+
+static inline long minimum(long a, long b) {
+  return a <= b ? a : b;
+}
+
+/*
+ * copy minimum(n, max) bytes from source to destination.
+ * add a null character to destination if there is room for it and n is positive.
+ * return the number of bytes copied excluding the null character.
+ */
+
+static long memnmcpy(char *dst, const char *src, long n, long max) {
+  long l = minimum(n, max);
+  n = l;
+
+  while(l > 0) {
+    *dst ++ = *src ++;
+    -- l;
+  }
+  if(max > n && n > 0) {
+    *dst = 0;
+  }
+
+  return n >= 0 ? n : 0;
+}
+
+/*
+ * static functions
+ */
+
+bool logger_register_log_entries_helper(LogEntry *entries, size_t count) {
+  if(log_entries_count < MAX_LOG_ENTRIES) {
+    log_entries[log_entries_count].entries = entries;
+    log_entries[log_entries_count].count = count;
+    log_entries_count ++;
+    return true;
+  }
+  return false;
+}
+
+static void logger_initialize_all_log_entries(void) {
+  if(!initialized) {
+    const unsigned long L_MAX_POSSIBLE_LOG_ENTRIES = 65536;
+    unsigned long i;
+    for(i = 0; i < L_MAX_POSSIBLE_LOG_ENTRIES; i ++) {
+      if(all_log_entries[i].id == LOGGER_INVALID_ID && i >= 1) {
+        logger_register_log_entries_helper(all_log_entries, i - 1);
+        break;
+      }
+    }
+    initialized = true;
+  }
+}
+
+static LogEntry* logger_find_log_entry_in_entries(uint16_t id, LogEntryGroup *log_entries) {
+  size_t i;
   for(i = 0; i < log_entries->count; i ++) {
     if(id == log_entries->entries[i].id) {
       return &log_entries->entries[i];
@@ -58,9 +139,9 @@ static LogEntry* logger_find_log_entry_in_entries(uint16_t id, LogEntryGroup *lo
 }
 
 static LogEntry* logger_find_log_entry(uint16_t id) {
-  int i;
   LogEntryGroup *entries;
   LogEntry *result;
+  size_t i;
 
   for(i = 0; i < log_entries_count; i ++) {
     entries = &log_entries[i];
@@ -74,8 +155,7 @@ static LogEntry* logger_find_log_entry(uint16_t id) {
 
 
 
-
-static int logger_is_formatting_character_flag_or_digit(char c) {
+static bool logger_is_formatting_character_flag_or_digit(char c) {
   return c == '+' || c == '-' || c == ' ' || c == '#' // flags
       || c == '.' || ('0' <= c && c <= '9'); // numbers
 }
@@ -85,7 +165,7 @@ static int logger_is_formatting_character_flag_or_digit(char c) {
  * return length of the specifier if found or zero otherwise.
  */
 
-static int logger_find_next_specifier(char **format) {
+static long logger_find_next_specifier(char **format) {
   char c;
   char *pos;
   uint16_t len;
@@ -119,29 +199,24 @@ static int logger_find_next_specifier(char **format) {
 }
 
 static void logger_replace_special_characters(char *buffer, int length) {
-  for(int i = 0; i < length; i ++) {
+  int i;
+  for(i = 0; i < length; i ++) {
     if(buffer[i] == '|' ) buffer[i] = '!' ;
     if(buffer[i] == '\n') buffer[i] = '\r';
     if(buffer[i] == '\0') buffer[i] = '0' ;
   }
 }
 
-static int logger_snvprintf_id(char *buffer, int length, int compressed, int id) {
+static int logger_snvprintf_id(char *buffer, int length, bool encode, uint16_t id) {
   int len;
 
-  if(compressed) {
-    if(length < 6) {
-      return ERROR_BUFFER_OVERFLOW;
-    }
-    len = snprintf(buffer, 6, "%04X|", id);
+  if(encode) {
+    len = snprintf(buffer, length, "%04X|", id);
   } else {
-    if(length < 10) {
-      return ERROR_BUFFER_OVERFLOW;
-    }
-    len = snprintf(buffer, 10, "[0X%04X] ", id);
+    len = snprintf(buffer, length, "[0x%04X] ", id);
   }
 
-  return len;// < 0 ? ERROR_FORMATTING : len > length ? ERROR_BUFFER_OVERFLOW : len;
+  return len <= length ? len : ERROR_BUFFER_OVERFLOW;
 }
 
 static int logger_sprintf_parameter_separator(char *buffer, int length) {
@@ -152,7 +227,7 @@ static int logger_sprintf_parameter_separator(char *buffer, int length) {
   return 1;
 }
 
-static int logger_snvprintf_parameters_compressed_and_encoded(char *buffer, int length, const char *format, va_list params) {
+static int logger_snvprintf_parameters_encoded(char *buffer, int length, const char *format, va_list params) {
   char *buf = buffer;
   char *fmt = (char *) format;
 
@@ -240,9 +315,8 @@ static int logger_snvprintf_parameters(char *buffer, int length, const char *for
   return len;
 }
 
-static int logger_snvprintf_parameters_compressed(char *buffer, int length, const char *format, va_list params) {
+static int logger_snvprintf_parameters_encoded_with_printf(char *buffer, int length, const char *format, va_list params) {
   char *buf = buffer;
-  char *fmt = (char *) format;
 
   int len = logger_snvprintf_parameters(buffer, length, format, params);
 
@@ -262,12 +336,11 @@ static int logger_snvprintf_parameters_compressed(char *buffer, int length, cons
   return buffer - buf;
 }
 
-static int logger_snvprintf_entry(char *buffer, int length, uint16_t id, int compressed, int encode, const char *format, va_list params) {
+static int logger_snvprintf_entry(char *buffer, int length, uint16_t id, bool encode, bool is_printf, const char *format, va_list params) {
   char *buf = buffer;
-  char *fmt = (char *) format;
   int len;
 
-  len = logger_snvprintf_id(buffer, length, compressed, id);
+  len = logger_snvprintf_id(buffer, length, encode, id);
 
   if(len < 0) {
     return len;
@@ -275,10 +348,10 @@ static int logger_snvprintf_entry(char *buffer, int length, uint16_t id, int com
   buffer += len;
   length -= len;
 
-  if(compressed && encode) {
-    len = logger_snvprintf_parameters_compressed_and_encoded(buffer, length, format, params);
-  } else if(compressed) {
-    len = logger_snvprintf_parameters_compressed(buffer, length, format, params);
+  if(encode && is_printf) {
+    len = logger_snvprintf_parameters_encoded_with_printf(buffer, length, format, params);
+  } else if(encode) {
+    len = logger_snvprintf_parameters_encoded(buffer, length, format, params);
   } else {
     len = logger_snvprintf_parameters(buffer, length, format, params);
   }
@@ -300,20 +373,18 @@ static int logger_snvprintf_entry(char *buffer, int length, uint16_t id, int com
   return buffer - buf;
 }
 
-static void logger_log_helper(LogSeverity severity, int has_registered_id, uint16_t id, const char *format, va_list params) {
-  int i;
-  char buffer[MAX_LOG_LINE_SIZE];
-  int encode = 1;
+static void logger_log_helper(LogSeverity severity, bool is_printf, uint16_t id, const char *format, va_list params) {
+  size_t i;
+  char buffer[LOG_LINE_SIZE];
   char *fmt;
   int len;
 
-  if(has_registered_id) {
+  if(is_printf) {
+    fmt = (char *) format;
+  } else { // has a registered id
     LogEntry *entry = logger_find_log_entry(id);
     assert(entry != NULL);
-    fmt = (char *) entry->message;
-  } else {
-    fmt = (char *) format;
-    encode = 0;
+    fmt = (char *) entry->format;
   }
 
   for(i = 0; i < log_writers_count; i ++) {
@@ -323,15 +394,22 @@ static void logger_log_helper(LogSeverity severity, int has_registered_id, uint1
       va_list params_copy;
       va_copy(params_copy, params);
 
-      len = logger_snvprintf_entry(buffer, MAX_LOG_LINE_SIZE, id, writer->is_compressed, encode, fmt, params_copy);
+      len = logger_snvprintf_entry(buffer, LOG_LINE_SIZE, id, writer->is_encoded, is_printf, fmt, params_copy);
 
-      assert(len > 0);
-
-      //compress_before_writing();
-
-      if(len > 0) {
-        writer->writer(buffer, len);
+      if(len == ERROR_BUFFER_OVERFLOW) {
+        const char *msg = ".. truncated ..|\n";
+        const int n = strlen(msg);
+        memnmcpy(buffer + LOG_LINE_SIZE - n, msg, n, n);
+        len = LOG_LINE_SIZE;
+      } else if(len == ERROR_FORMATTING) {
+        len = logger_snvprintf_id(buffer, LOG_LINE_SIZE, writer->is_encoded, id);
+        const char *msg = "this log entry has formatting errors|\n";
+        const int n = strlen(msg);
+        memnmcpy(buffer + len, msg, n, len);
+        len = strlen(buffer);
       }
+
+      writer->writer((uint8_t *) buffer, len);
 
       va_end(params_copy);
     }
@@ -349,29 +427,27 @@ static void logger_log_helper(LogSeverity severity, int has_registered_id, uint1
  * assume there are no errors in the input.
  * count until next parameter separator and return the count (excluding the separator itself).
  */
-static int logger_decoder_get_length_of_next_parameter(const char *entry, int entry_length) { // return the length of the next parameter in the entry or ERROR_DECODING if fails
-  int len;
+static size_t logger_decoder_get_length_of_next_parameter(const char *entry, size_t entry_length) {
+  size_t len;
   for(len = 0; len < entry_length; len ++) {
     if(entry[len] == '|') {
-      break;
+      return len + 1;
     }
   }
-  return len;
+  return 0;
 }
 
 /*
- * assume there are no errors in the input entry.
+ * assume there are no errors in the entry's beginning and end.
  * decode the entry and write to destination as long as it has space.
  * return the number of characters that are written to the destination or would have been written if it was large enough.
- *
- *
  */
 static int logger_decoder_decode_entry_helper(char *dst, int d_len, uint16_t id, const char *format, const char *entry, int entry_length) {
   char *fmt = (char *) format;
-  const int d_length = d_len; // number of characters that are copied if destination was large enough
+  const long d_length = d_len; // number of characters that are copied if destination was large enough
   int specifier_len, formatting_len, parameter_len;
 
-  int len = snprintf(dst, d_len, "[%0#6X] ", id);
+  int len = snprintf(dst, d_len, "[0x%04X] ", id);
 
   dst += len;
   d_len -= len;
@@ -385,16 +461,21 @@ static int logger_decoder_decode_entry_helper(char *dst, int d_len, uint16_t id,
     memnmcpy(dst, previous_fmt, formatting_len, d_len);
     fmt += specifier_len;
     previous_fmt = fmt;
+    dst += formatting_len;
     d_len -= formatting_len;
 
     parameter_len = logger_decoder_get_length_of_next_parameter(entry, entry_length);
 
-    memnmcpy(dst, entry, parameter_len, d_len);
-    d_len -= parameter_len;
+    if(parameter_len == 0) {
+      break;
+    }
 
-    dst += formatting_len + parameter_len;
-    entry += parameter_len + 1; // skip '|'
-    entry_length -= parameter_len + 1; // skip '|'
+    memnmcpy(dst, entry, parameter_len - 1, d_len); // do not copy '|'
+
+    dst += parameter_len - 1; // do not copy '|'
+    d_len -= parameter_len - 1; // do not copy '|'
+    entry += parameter_len;
+    entry_length -= parameter_len;
   }
 
   // copy the remaining of the formatting string
@@ -423,28 +504,32 @@ static uint16_t logger_decoder_get_id(const char *entry) {
  * 8029|48010||1258.05|\n
  * 8037|string with numbers 1554.71|2.57|\n
  */
-static int logger_decoder_is_entry_decodable(const char *entry, const int entry_length) {
+static long logger_decoder_is_entry_decodable(const char *entry, size_t entry_length) {
   return entry_length >= 6 &&
     entry[4] == '|' && // a valid entry starts with XXXX|
     entry[entry_length - 2] == '|' && entry[entry_length - 1] == '\n'; // and must have '|\n' at the end
 }
 
-static int logger_decoder_decode_entry(char *dst, int d_len, const char *entry, int entry_length) {
+static long logger_decoder_decode_entry(char *dst, size_t d_len, const char *entry, size_t entry_length) {
   if(logger_decoder_is_entry_decodable(entry, entry_length)) {
     uint16_t id = logger_decoder_get_id(entry);
 
     LogEntry *le = logger_find_log_entry(id);
 
     if(le != NULL) {
-      const char *format = le->message;
+      const char *format = le->format;
+      return logger_decoder_decode_entry_helper(dst, d_len, id, format, entry, entry_length);
+    } else {
+      const char *format = "%s";
       return logger_decoder_decode_entry_helper(dst, d_len, id, format, entry, entry_length);
     }
   }
   return ERROR_DECODING;
 }
 
-static int logger_decoder_get_length_of_next_entry(const char *entry, int max) {
-  for(int i = 0; i < max; i ++, entry ++) {
+static size_t logger_decoder_get_length_of_next_entry(const char *entry, size_t max) {
+  size_t i;
+  for(i = 0; i < max; i ++, entry ++) {
     if(*entry == '\n') {
       return i + 1;
     }
@@ -458,22 +543,34 @@ static int logger_decoder_get_length_of_next_entry(const char *entry, int max) {
  * public functions
  */
 
-void logger_register_log_entries(LogEntry *entries, int count) {
-  if(log_entries_count < MAX_LOG_ENTRIES) {
-    log_entries[log_entries_count].entries = entries;
-    log_entries[log_entries_count].count = count;
-    log_entries_count ++;
+void logger_initialize(void) {
+  if(!initialized) {
+    logger_initialize_all_log_entries();
+    initialized = true;
   }
 }
 
-void logger_register_log_writer(LogWriter writer, LogSeverity severity, int is_compressed) {
+bool logger_register_log_entries(LogEntry *entries, size_t count) {
+  return logger_register_log_entries_helper(entries, count);
+}
+
+bool logger_register_log_writer(LogWriter writer, LogSeverity severity, bool encode) {
+  unsigned int i;
+  for(i = 0; i < log_writers_count; i ++) { // do not register duplicates
+    if(log_writers[i].writer == writer
+        && log_writers[i].severity == severity
+        && log_writers[i].is_encoded == encode) {
+      return false;
+    }
+  }
   if(log_writers_count < MAX_LOG_WRITERS) {
     log_writers[log_writers_count].writer = writer;
     log_writers[log_writers_count].severity = severity;
-    log_writers[log_writers_count].is_compressed = is_compressed;
-
+    log_writers[log_writers_count].is_encoded = encode;
     log_writers_count ++;
+    return true;
   }
+  return false;
 }
 
 
@@ -482,7 +579,7 @@ void logger_log(uint16_t id, ...) {
   va_list varargs;
   va_start(varargs, id);
 
-  logger_log_helper(SEVERITY_NORMAL, 1, id, "", varargs);
+  logger_log_helper(SEVERITY_INFO, false, id, "", varargs);
 
   va_end(varargs);
 }
@@ -491,7 +588,7 @@ void logger_severity_log(LogSeverity severity, uint16_t id, ...) {
   va_list varargs;
   va_start(varargs, id);
 
-  logger_log_helper(severity, 1, id, "", varargs);
+  logger_log_helper(severity, false, id, "", varargs);
 
   va_end(varargs);
 }
@@ -504,7 +601,7 @@ void logger_printf(const char * format, ...) {
   va_list varargs;
   va_start(varargs, format);
 
-  logger_log_helper(SEVERITY_NORMAL, 0, 0, format, varargs);
+  logger_log_helper(SEVERITY_INFO, true, 0, format, varargs);
 
   va_end(varargs);
 }
@@ -513,101 +610,51 @@ void logger_severity_printf(LogSeverity severity, const char * format, ...) {
   va_list varargs;
   va_start(varargs, format);
 
-  logger_log_helper(severity, 0, 0, format, varargs);
+  logger_log_helper(severity, true, 0, format, varargs);
 
   va_end(varargs);
-}
-
-void logger_printf_with_id(uint16_t id, const char * format, ...) {
-  va_list varargs;
-  va_start(varargs, format);
-
-  logger_log_helper(SEVERITY_NORMAL, 0, id, format, varargs);
-
-  va_end(varargs);
-}
-
-void logger_severity_printf_with_id(LogSeverity severity, uint16_t id, const char * format, ...) {
-  va_list varargs;
-  va_start(varargs, format);
-
-  logger_log_helper(severity, 0, id, format, varargs);
-
-  va_end(varargs);
-}
-
-static void logger_assert_no_duplicate_entries() {
 }
 
 /*
  * decode from source to destination as long as it has empty space.
  * if decoding fails copy the source directly to the input.
- * update s_len to show the number of unused bytes in the source.
- * return the number of characters that are written to the destination or would have been written if it was large enough.
+ * update s_unused_bytes to show the number of unused bytes in the source.
+ * the destination buffer must be large enough to at least hold one decoded entry,
+ * otherwise no decoding will happen.
+ * return the number of characters that are written to the destination.
  */
-int logger_decode(char *dst, int d_len, const char *src, int *s_len) {
-  const int d_length = d_len; // number of characters that are copied if destination was large enough
+size_t logger_decode(char *dst, size_t d_len, const char *src, size_t s_len, size_t *s_unused_bytes) {
+  const size_t original_d_len = d_len;
   char *entry = (char *) src;
-  int entry_length;
-  int remaining_length = *s_len;
+  size_t entry_length;
 
-  while((entry_length = logger_decoder_get_length_of_next_entry(entry, remaining_length)) > 0) {
+  while((entry_length = logger_decoder_get_length_of_next_entry(entry, s_len)) > 0) {
     int len = logger_decoder_decode_entry(dst, d_len, entry, entry_length);
 
     if(len == ERROR_DECODING) { // decoding failed
-      // copy the failed entry to the output
+      if(entry_length > d_len) {
+        break;
+      }
+      // copy the failed entry to the output as it is
       memnmcpy(dst, entry, entry_length, d_len);
       dst += entry_length;
       d_len -= entry_length;
+    } else {
+      if((size_t)len > d_len) {
+        break;
+      }
+      dst += len;
+      d_len -= len;
     }
-    dst += len;
-    d_len -= len;
     entry += entry_length;
-    remaining_length -= entry_length;
+    s_len -= entry_length;
   }
 
-  *s_len = remaining_length;
-  return d_length - d_len;
+  *s_unused_bytes = s_len;
+  return original_d_len - d_len;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
- * delete-me
- */
-inline int minimum(int a, int b) {
-  return a <= b ? a : b;
-}
-
-/*
- * copy minimum(n, max) bytes from source to destination.
- * add a null character to destination if there is room for it and n is positive.
- * return the number of bytes copied excluding the null character.
- */
-
-int memnmcpy(char *dst, const char *src, int n, int max) {
-  int l = minimum(n, max);
-  n = l;
-
-  while(l > 0) {
-    *dst ++ = *src ++;
-    -- l;
-  }
-  if(max > n && n > 0) {
-    *dst = 0;
-  }
-
-  return n >= 0 ? n : 0;
+size_t logger_get_max_buffer_size() {
+  return LOG_LINE_SIZE;
 }
 

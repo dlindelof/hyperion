@@ -12,8 +12,8 @@ SRC_DIRS     := .
 TEST_SRC_DIR := tests
 
 # source files
-CSRCS   			:= $(foreach dir, $(SRC_DIRS), $(wildcard $(dir)/*.c))
-CPPSRCS 			:= $(foreach dir, $(SRC_DIRS), $(wildcard $(dir)/*.cpp))
+CSRCS   	:= $(foreach dir, $(SRC_DIRS), $(wildcard $(dir)/*.c))
+CPPSRCS 	:= $(foreach dir, $(SRC_DIRS), $(wildcard $(dir)/*.cpp))
 ALLSRCS      	:= $(CSRCS) $(CPPSRCS)
 TEST_CPPSRCS 	:= $(wildcard $(TEST_SRC_DIR)/*.cpp)
 
