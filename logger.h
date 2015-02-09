@@ -44,8 +44,8 @@ bool logger_register_log_writer(LogWriter writer, LogSeverity severity, bool enc
 
 void logger_log(uint16_t id, ...);
 void logger_severity_log(LogSeverity severity, uint16_t id, ...);
-void logger_printf(const char * format, ...);
-void logger_severity_printf(LogSeverity severity, const char * format, ...);
+void logger_printf(const char * format, ...) __attribute__ ((format (printf, 1, 2)));
+void logger_severity_printf(LogSeverity severity, const char * format, ...) __attribute__ ((format (printf, 2, 3)));
 
 size_t logger_decode(char *dst, size_t d_len, const char *src, size_t s_len, size_t *s_unused_bytes);
 
