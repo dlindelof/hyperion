@@ -121,9 +121,7 @@ static size_t read_literal_or_copy(const uint8_t *buffer, size_t length, uint8_t
   return 0; // nothing to read or not enough to read
 }
 
-/*
- * functions for working with dictionaries.
- */
+
 
 static void dictionary_copy_from_buffer(Dictionary *dictionary, const uint8_t *s, unsigned int n) {
   assert(n <= DICTIONARY_SIZE);
@@ -177,9 +175,7 @@ static int dictionary_find_lonest_match(Dictionary *dictionary, const uint8_t *s
   return m;
 }
 
-/*
- * public functions.
- */
+
 
 void dictionary_init(Dictionary *dictionary) {
   /*
@@ -193,7 +189,7 @@ void dictionary_init(Dictionary *dictionary) {
 
 /*
  * compress the source and write in destination.
- * do not write more than packet_len.
+ * do not write more than d_remaining_packet_len.
  * update s_len to the number of unused bytes in the source.
  * return the number of bytes written into the destination.
  */
@@ -250,7 +246,7 @@ size_t compress(Dictionary *dictionary, uint8_t *dst, size_t d_len, const uint8_
 
 /*
  * decompress the source and write in destination.
- * do not decompress more than packet_len.
+ * do not decompress more than s_remaining_packet_len.
  * update s_unused_bytes to the number of unused bytes in the source.
  * return the number of bytes written into the destination.
  */

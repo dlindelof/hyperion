@@ -84,9 +84,9 @@ int main(int argc, char *argv[]) {
   }
 
   gettimeofday(&t2, NULL);
-  //fprintf(stderr, "Finished in about %.0f milliseconds. \n", (t2.tv_sec - t1.tv_sec) * 1000.0 + (t2.tv_usec - t1.tv_usec) / 1000.0);
-  //printf("text:  %ld bytes\n", textcount);
-  //printf("code:  %ld bytes (%ld%%)\n", codecount, (codecount * 100) / textcount);
+  fprintf(stderr, "Finished in about %.0f milliseconds. \n", (t2.tv_sec - t1.tv_sec) * 1000.0 + (t2.tv_usec - t1.tv_usec) / 1000.0);
+  printf("text:  %ld bytes\n", textcount);
+  printf("code:  %ld bytes (%ld%%)\n", codecount, (codecount * 100) / textcount);
 
   fclose(d_file);
   fclose(s_file);

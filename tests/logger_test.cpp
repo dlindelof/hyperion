@@ -14,9 +14,7 @@ extern "C"
 //CppUTest includes should be after your system includes
 #include "CppUTest/TestHarness.h"
 
-/*
- * definitions
- */
+
 
 #ifndef STRNCMP_EQUAL
 
@@ -30,9 +28,7 @@ extern "C"
 
 #endif
 
-/*
- * tests
- */
+
 
 TEST_GROUP(LOGGER_PRINTF) {
 };
@@ -211,9 +207,6 @@ TEST(LOGGER_DECODE, Logger_DecodeId_ReturnsId) {
 
 
 
-/*
- * Log writing & reading mock
- */
 
 class LogStorage {
   char buffer[BUFSIZE];
@@ -224,9 +217,10 @@ public:
   }
 
   void write(const char *data, int length) {
-    int i = strlen(buffer);
-    char * buf = &buffer[i];
-    strcat(buf, data);
+    size_t len = strlen(buffer);
+
+    char * buf = &buffer[len];
+    strncpy(buf, data, length);
     buf[length] = 0;
   }
 
@@ -297,6 +291,15 @@ TEST_GROUP(LOGGER_DECODER) {
   char buffer[BUFSIZE];
   char entry[BUFSIZE];
   char text[BUFSIZE];
+
+  void setup() {
+  }
+
+  void teardown() {
+    log_entries_count = 0;
+    log_writers_count = 0;
+  }
+
 };
 
 TEST(LOGGER_DECODER, LoggerDecoder_DecodeEntryHelper_WritesDecodedEntry) {
@@ -327,6 +330,8 @@ TEST(LOGGER_DECODER, LoggerDecoder_DecodeValidText_WritesDecodedText) {
 
 TEST(LOGGER_DECODER, LoggerDecoder_DecodeValidTextWithNoRegisteredId_WritesDecodedText) {
   int n;
+  LogEntry entries[] = { { .id = 42, .format = "This entry has %s id" } };
+  logger_register_log_entries(entries, 0);
   strcpy(text, "002A|unregistered|\n002a|an|\n");
   size_t s_len = strlen(text);
   size_t s_unused_bytes;
@@ -416,6 +421,8 @@ TEST_GROUP(LOGGER_LOG_ENTRIES) {
   }
 
   void teardown() {
+    log_entries_count = 0;
+    log_writers_count = 0;
   }
 
 };
@@ -494,12 +501,6 @@ TEST(LOGGER_HELPER_FUNCTIONS, memnmcpy_CopyWithNegativeMax_CopiesNothing) {
   memnmcpy(dst, "this is a test.", 5, -1);
   STRCMP_EQUAL("some random value", dst);
 }
-
-
-
-
-
-
 
 
 

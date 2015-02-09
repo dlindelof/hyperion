@@ -71,9 +71,7 @@ static LogEntry all_log_entries[] = {
 
 static bool initialized = false;
 
-/*
- * general helper functions
- */
+
 
 static inline long minimum(long a, long b) {
   return a <= b ? a : b;
@@ -100,9 +98,7 @@ static long memnmcpy(char *dst, const char *src, long n, long max) {
   return n >= 0 ? n : 0;
 }
 
-/*
- * static functions
- */
+
 
 bool logger_register_log_entries_helper(LogEntry *entries, size_t count) {
   if(log_entries_count < MAX_LOG_ENTRIES) {
@@ -375,7 +371,7 @@ static int logger_snvprintf_entry(char *buffer, int length, uint16_t id, bool en
 
 static void logger_log_helper(LogSeverity severity, bool is_printf, uint16_t id, const char *format, va_list params) {
   size_t i;
-  char buffer[LOG_LINE_SIZE];
+  char buffer[LOG_LINE_SIZE] = {0};
   char *fmt;
   int len;
 
@@ -383,7 +379,9 @@ static void logger_log_helper(LogSeverity severity, bool is_printf, uint16_t id,
     fmt = (char *) format;
   } else { // has a registered id
     LogEntry *entry = logger_find_log_entry(id);
-    assert(entry != NULL);
+    if(entry == NULL) {
+      return;
+    }
     fmt = (char *) entry->format;
   }
 
@@ -404,7 +402,7 @@ static void logger_log_helper(LogSeverity severity, bool is_printf, uint16_t id,
       } else if(len == ERROR_FORMATTING) {
         len = logger_snvprintf_id(buffer, LOG_LINE_SIZE, writer->is_encoded, id);
         const char *msg = "this log entry has formatting errors|\n";
-        const int n = strlen(msg);
+        const int n = strlen(msg) + 1; // include the null character
         memnmcpy(buffer + len, msg, n, len);
         len = strlen(buffer);
       }
@@ -418,10 +416,6 @@ static void logger_log_helper(LogSeverity severity, bool is_printf, uint16_t id,
 }
 
 
-
-/*
- * Decoding functions
- */
 
 /*
  * assume there are no errors in the input.
@@ -538,10 +532,6 @@ static size_t logger_decoder_get_length_of_next_entry(const char *entry, size_t 
 }
 
 
-
-/*
- * public functions
- */
 
 void logger_initialize(void) {
   if(!initialized) {

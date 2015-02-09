@@ -1,5 +1,6 @@
 LOG_ENTRY(LOGGER_GENERAL_ID,                 0x0000, "%s")
 
+
 LOG_ENTRY(NB_LOG_ERROR_SIMULATED_ANNEALING,  0x0001, "!!! SA: infinite cost")
 LOG_ENTRY(NB_LOG_ERROR_MALLOC_OOM,           0x0002, "!!! Malloc")
 LOG_ENTRY(NB_LOG_ERROR_CALLOC_OOM,           0x0003, "!!! Calloc")
@@ -15,6 +16,7 @@ LOG_ENTRY(NB_LOG_ASSERT_LOG,                 0x000C, "!!! Assertion failed in lo
 LOG_ENTRY(NB_LOG_SCHEDULE_CONFIDENCE,        0x000D, "Schedule confidence %4.2f")
 LOG_ENTRY(NB_LOG_PREDICTION_ERROR,           0x000E, "Building model prediction: %.2f C; Error: %.2f C")
 LOG_ENTRY(NB_LOG_OFT_BM_UPDATE,              0x000F, "BM update: %d")
+
 
 LOG_ENTRY(NIQ_LOG_TEST1,                     0x8001, "Test without parameter")
 LOG_ENTRY(NIQ_LOG_TEST2,                     0x8002, "Test with params: p1 = %c ; p2 = %d ; p3 = %2.2f ; p4 = %8X")
@@ -74,7 +76,7 @@ LOG_ENTRY(NIQ_LOG_CFT_OTS_SENSOR,            0x8037, "OTS1: %.2f Ohm/%.2f C")
 LOG_ENTRY(NIQ_LOG_CFT_DATETIME,              0x8038, "Current: %s")
 LOG_ENTRY(NIQ_LOG_CFT_DATETIME_CHANGED,      0x8039, "Changed: %s")
 LOG_ENTRY(NIQ_LOG_DIE_REASON,                0x803A, "NiQ died because of %d")
-
+LOG_ENTRY(NIQ_LOG_SI_EVENT,                  0x803B, "%s")
 
 
 /* This entry must be on the last line. Add new entries before this line. */
