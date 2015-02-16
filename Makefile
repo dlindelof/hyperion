@@ -8,12 +8,14 @@ CPPUTESTEXT_LIB  := /usr/lib/x86_64-linux-gnu/libCppUTestExt.a
 BUILD_DIR      := build
 TEST_BUILD_DIR := $(BUILD_DIR)/tests
 
-SRC_DIRS     := .
-TEST_SRC_DIR := tests
+SRC_DIRS      := .
+UTILITIES_DIR := utilities
+TEST_SRC_DIR  := tests
 
 
 # source files
 CSRCS   	:= $(foreach dir, $(SRC_DIRS), $(wildcard $(dir)/*.c))
+UTILITIES_CSRCS := $(notdir $(foreach dir, $(UTILITIES_DIR), $(wildcard $(dir)/*.c)))
 ALLSRCS      	:= $(CSRCS)
 TEST_CPPSRCS 	:= $(wildcard $(TEST_SRC_DIR)/*.cpp)
 
@@ -23,6 +25,7 @@ $(TEST_BUILD_DIR) $(BUILD_DIR):
 
 # object files
 COBJS        := $(CSRCS:%.c=$(BUILD_DIR)/%.o)
+UTILITIES_COBJS := $(UTILITIES_CSRCS:%.c=$(BUILD_DIR)/%.o)
 TEST_CPPOBJS := $(patsubst $(TEST_SRC_DIR)/%.cpp,$(TEST_BUILD_DIR)/%.o,$(TEST_CPPSRCS))
 
 # common flags
@@ -33,16 +36,16 @@ CXXFLAGS :=
 $(COBJS): $(BUILD_DIR)/%.o: $(SRC_DIRS)/%.c | $(BUILD_DIR)
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
 	
+$(UTILITIES_COBJS): $(BUILD_DIR)/%.o: $(UTILITIES_DIR)/%.c | $(BUILD_DIR)
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
+	
 $(TEST_CPPOBJS): $(TEST_BUILD_DIR)/%.o: $(TEST_SRC_DIR)/%.cpp | $(TEST_BUILD_DIR)
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
 
-	
-$(BUILD_DIR)/lzss: $(BUILD_DIR) $(COBJS) 
-	$(CC) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ utilities/lzss_command.c
-	chmod +x $@
-	
-.PHONY: lzss
-lzss: $(BUILD_DIR)/lzss
+
+lzss: $(COBJS) $(UTILITIES_COBJS) | $(BUILD_DIR)
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o $(BUILD_DIR)/lzss $(UTILITIES_COBJS) $(COBJS)
+
 
 $(TEST_BUILD_DIR)/tests: CC = gcc
 $(TEST_BUILD_DIR)/tests: CPPFLAGS += -I$(CPPUTEST_INCLUDE) -g
