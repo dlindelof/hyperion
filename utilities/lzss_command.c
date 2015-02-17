@@ -4,11 +4,9 @@
 #include <assert.h>
 #include <sys/time.h>
 
-#include "../lzss.h"
-
+#include "lzss.h"
 
 struct Dictionary;
-
 
 #define BUFFER_SIZE (128)
 // dictionary will reset when these many bytes have been written to input.
@@ -43,7 +41,7 @@ int main(int argc, char *argv[]) {
 
   dictionary_init(&dictionary);
 
-  size_t s_len;
+  size_t s_len = 0;
   size_t len;
   long packet_len = PACKET_SIZE;
 

@@ -16,9 +16,6 @@ extern "C" {
  */
 #define DICT_BITS 11                      // must be less than or equal to 11
 #define DICTIONARY_SIZE (1 << DICT_BITS)  // dictionary size
-#define MATCH_BITS 4                      // must be between 2..4 inclusive
-#define THRESHOLD 2                       // minimum match length. do not change!
-#define LOOKAHEAD_SIZE ((1 << MATCH_BITS) + THRESHOLD - 1) // lookahead buffer size
 
 typedef struct {
   uint8_t buffer[DICTIONARY_SIZE];
