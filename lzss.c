@@ -202,7 +202,7 @@ static int dictionary_find_longest_match(Dictionary *dictionary, const uint8_t *
 
 
 
-void dictionary_init(Dictionary *dictionary) {
+void lzss_dictionary_init(Dictionary *dictionary) {
   /*
    * initial content of the dictionary must be consistent across
    * firmwares. do not change this line.
@@ -218,7 +218,7 @@ void dictionary_init(Dictionary *dictionary) {
  * update s_len to the number of unused bytes in the source.
  * return the number of bytes written into the destination.
  */
-size_t compress(Dictionary *dictionary, uint8_t *dst, size_t d_len, const uint8_t *src, size_t s_len, size_t *s_unused_bytes, size_t d_remaining_packet_len) {
+size_t lzss_compress(Dictionary *dictionary, uint8_t *dst, size_t d_len, const uint8_t *src, size_t s_len, size_t *s_unused_bytes, size_t d_remaining_packet_len) {
   const uint8_t *original_dst = dst;
   unsigned int position = 0, match_length = 0, max = 0;
 
@@ -276,7 +276,7 @@ size_t compress(Dictionary *dictionary, uint8_t *dst, size_t d_len, const uint8_
  * return the number of bytes written into the destination.
  */
 
-size_t decompress(Dictionary *dictionary, uint8_t *dst, size_t d_len, const uint8_t *src, size_t s_len, size_t *s_unused_bytes, size_t s_remaining_packet_len) {
+size_t lzss_decompress(Dictionary *dictionary, uint8_t *dst, size_t d_len, const uint8_t *src, size_t s_len, size_t *s_unused_bytes, size_t s_remaining_packet_len) {
   const uint8_t *original_dst = dst;
   const size_t original_s_len = s_len;
   unsigned int position, match_length, len;
