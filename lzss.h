@@ -22,10 +22,10 @@ typedef struct {
   size_t tail;
 } Dictionary;
 
-void dictionary_init(Dictionary *dictionary);
+void lzss_dictionary_init(Dictionary *dictionary);
 
-size_t compress(Dictionary *dictionary, uint8_t *dst, size_t d_len, const uint8_t *src, size_t s_len, size_t *s_unused_bytes, size_t d_remaining_packet_len);
-size_t decompress(Dictionary *dictionary, uint8_t *dst, size_t d_len, const uint8_t *src, size_t s_len, size_t *s_unused_bytes, size_t s_remaining_packet_len);
+size_t lzss_compress(Dictionary *dictionary, uint8_t *dst, size_t d_len, const uint8_t *src, size_t s_len, size_t *s_unused_bytes, size_t d_remaining_packet_len);
+size_t lzss_decompress(Dictionary *dictionary, uint8_t *dst, size_t d_len, const uint8_t *src, size_t s_len, size_t *s_unused_bytes, size_t s_remaining_packet_len);
 
 
 #ifdef __cplusplus

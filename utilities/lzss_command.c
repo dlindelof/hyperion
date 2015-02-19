@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
 
   gettimeofday(&t1, NULL);
 
-  dictionary_init(&dictionary);
+  lzss_dictionary_init(&dictionary);
 
   size_t s_len = 0;
   size_t len;
@@ -59,10 +59,10 @@ int main(int argc, char *argv[]) {
     }
 
     if(compressing) {
-      len = compress(&dictionary, d_buffer, BUFFER_SIZE, s_buffer, s_len, &s_unused_bytes, packet_len);
+      len = lzss_compress(&dictionary, d_buffer, BUFFER_SIZE, s_buffer, s_len, &s_unused_bytes, packet_len);
       packet_len -= len;
     } else {
-      len = decompress(&dictionary, d_buffer, BUFFER_SIZE, s_buffer, s_len, &s_unused_bytes, packet_len);
+      len = lzss_decompress(&dictionary, d_buffer, BUFFER_SIZE, s_buffer, s_len, &s_unused_bytes, packet_len);
       packet_len -= s_len - s_unused_bytes;
     }
 
@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
 
     if(packet_len == 0) {
       packet_len = PACKET_SIZE;
-      dictionary_init(&dictionary);
+      lzss_dictionary_init(&dictionary);
     }
 
     memmove(s_buffer, s_buffer + s_len - s_unused_bytes, s_unused_bytes); // copy unused bytes to be decompressed next
