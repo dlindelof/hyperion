@@ -73,9 +73,7 @@ static bool initialized = false;
 
 
 
-static inline long minimum(long a, long b) {
-  return a <= b ? a : b;
-}
+#define MINIMUM(_a_,_b_) (((_a_) <= (_b_)) ? (_a_) : (_b_))
 
 /*
  * copy minimum(n, max) bytes from source to destination.
@@ -84,7 +82,7 @@ static inline long minimum(long a, long b) {
  */
 
 static long memnmcpy(char *dst, const char *src, long n, long max) {
-  long l = minimum(n, max);
+  long l = MINIMUM(n, max);
   n = l;
 
   while(l > 0) {
@@ -210,7 +208,7 @@ static int logger_snvprintf_id(char *buffer, int length, bool encode, uint16_t i
   if(encode) {
     len = snprintf(buffer, length, "\n%04X|", id);
   } else {
-    len = snprintf(buffer, length, "[0x%04X] ", id);
+    len = snprintf(buffer, length, "[0x%04X]", id);
   }
 
   return len <= length ? len : ERROR_BUFFER_OVERFLOW;
@@ -245,7 +243,7 @@ static int logger_snvprintf_parameters_encoded(char *buffer, int length, const c
       case 'c': {
         char c = (char) va_arg(params, int32_t);
         len = snprintf(buffer, length, formatting, c);
-        logger_replace_special_characters(buffer, minimum(len, length));
+        logger_replace_special_characters(buffer, MINIMUM(len, length));
         break;
       }
       case 'd': case 'i': {
@@ -271,12 +269,11 @@ static int logger_snvprintf_parameters_encoded(char *buffer, int length, const c
       case 's': {
         char *s = va_arg(params, char *);
         len = snprintf(buffer, length, formatting, s);
-        logger_replace_special_characters(buffer, minimum(len, length));
+        logger_replace_special_characters(buffer, MINIMUM(len, length));
         break;
       }
       default:
-        assert(0);
-        break;
+        return ERROR_FORMATTING;
     }
     if(len < 0) {
       return ERROR_FORMATTING;
@@ -302,7 +299,7 @@ static int logger_snvprintf_parameters_encoded(char *buffer, int length, const c
 
 static int logger_snvprintf_parameters(char *buffer, int length, const char *format, va_list params) {
   int len = vsnprintf(buffer, length, format, params);
-  logger_replace_special_characters(buffer, len);
+  logger_replace_special_characters(buffer, MINIMUM(len, length));
 
   if(len < 0) {
     return ERROR_FORMATTING;
@@ -444,7 +441,7 @@ static int logger_decoder_decode_entry_helper(char *dst, int d_len, uint16_t id,
   const long d_length = d_len; // number of characters that are copied if destination was large enough
   int specifier_len, formatting_len, parameter_len;
 
-  int len = snprintf(dst, d_len, "[0x%04X] ", id);
+  int len = snprintf(dst, d_len, "[0x%04X]", id);
 
   dst += len;
   d_len -= len;
@@ -530,7 +527,7 @@ static long logger_decoder_decode_entry(char *dst, size_t d_len, const char *ent
 }
 
 static int logger_decoder_write_invalid_entry(char *dst, int d_len, const char *entry, int entry_len) {
-  const char *invalid_header = "[0xFFFF] ";
+  const char *invalid_header = "[0xFFFF][L] ";
   const int invalid_header_length = strlen(invalid_header);
 
   snprintf(dst, d_len, "%s", invalid_header);
