@@ -102,17 +102,17 @@ TEST_GROUP(LOGGER_PRINTF_ENTRY) {
 
 TEST(LOGGER_PRINTF_ENTRY, Logger_PrintEmptyString_PrintsEmptyStringAddsIdAndNewLine) {
   n = logger_snvprintf_entry(buffer, BUFSIZE, 42, false, false, "", none);
-  STRNCMP_EQUAL("[0x002A] \n", buffer, n);
+  STRNCMP_EQUAL("[0x002A]\n", buffer, n);
 }
 
 TEST(LOGGER_PRINTF_ENTRY, Logger_PrintString_PrintsStringAddsIdAndNewLine) {
   n = logger_snvprintf_entry(buffer, BUFSIZE, 42, false, false, "Simple text with no parameters", none);
-  STRNCMP_EQUAL("[0x002A] Simple text with no parameters\n", buffer, n);
+  STRNCMP_EQUAL("[0x002A]Simple text with no parameters\n", buffer, n);
 }
 
 TEST(LOGGER_PRINTF_ENTRY, Logger_PrintStringWithSpecialCharacters_PrintsStringReplacesSpecialCharacters) {
   n = logger_snvprintf_entry(buffer, BUFSIZE, 42, false, false, "|Simple text with no parameters and with special characters |\n", none);
-  STRNCMP_EQUAL("[0x002A] !Simple text with no parameters and with special characters !\r\n", buffer, n);
+  STRNCMP_EQUAL("[0x002A]!Simple text with no parameters and with special characters !\r\n", buffer, n);
 }
 
 TEST(LOGGER_PRINTF_ENTRY, Logger_PrintTextLongerThanTheMaximumBufferSize_ReturnsMinusOne) {
@@ -127,11 +127,11 @@ TEST(LOGGER_PRINTF_ENTRY, Logger_PrintFormattedTextLongerThanTheMaximumBufferSiz
 
 TEST(LOGGER_PRINTF_ENTRY, Logger_PrintStringWithParameters_PrintsFormattedString) {
   n = logger_snvprintf_entry_test_helper(buffer, BUFSIZE, 42, false, false, "Text with %c %s %5.2f, %d, and 0x%04X", 'A', "String and", 12.2, 42, 42);
-  STRNCMP_EQUAL("[0x002A] Text with A String and 12.20, 42, and 0x002A\n", buffer, n);
+  STRNCMP_EQUAL("[0x002A]Text with A String and 12.20, 42, and 0x002A\n", buffer, n);
   n = logger_snvprintf_entry_test_helper(buffer, BUFSIZE, 42, false, false, "Text with %c %s %c %s", '|', "|||", 0, "");
-  STRNCMP_EQUAL("[0x002A] Text with ! !!! 0 \n", buffer, n);
+  STRNCMP_EQUAL("[0x002A]Text with ! !!! 0 \n", buffer, n);
   n = logger_snvprintf_entry_test_helper(buffer, BUFSIZE, 42, false, false, "Text with %c %s", '\n', "   ");
-  STRNCMP_EQUAL("[0x002A] Text with \r    \n", buffer, n);
+  STRNCMP_EQUAL("[0x002A]Text with \r    \n", buffer, n);
 }
 
 TEST(LOGGER_PRINTF_ENTRY, Logger_PrintCompressedEmptyString_PrintsEmptyStringAddsIdAndNewLineAddsSeparators) {
@@ -261,7 +261,7 @@ TEST(LOGGER_LOG, Logger_RegisterLogWriter_RegistersLogWriter) {
 TEST(LOGGER_LOG, Logger_printf_LogsTheString) {
   logger_register_log_writer(log_writer_function_1, SEVERITY_INFO, 0);
 
-  logger_printf("this is a test");
+  logger_printf(" this is a test");
   logger1.read(buffer);
   STRCMP_EQUAL("[0x1000] this is a test\n", buffer);
 }
@@ -270,7 +270,7 @@ TEST(LOGGER_LOG, Logger_SeverityCheck_SeverityIsWorking) {
   logger_register_log_writer(log_writer_function_1, SEVERITY_INFO, 0);
   logger_register_log_writer(log_writer_function_1, SEVERITY_VERBOSE, 0);
 
-  logger_severity_printf(SEVERITY_DEBUG, "this is a test");
+  logger_severity_printf(SEVERITY_DEBUG, " this is a test");
   logger1.read(buffer);
   STRCMP_EQUAL("[0x1000] this is a test\n", buffer);
 }
@@ -279,7 +279,7 @@ TEST(LOGGER_LOG, Logger_printfWithParam_LogsTheFormattedString) {
   logger_register_log_writer(log_writer_function_1, SEVERITY_INFO, 0);
   logger_register_log_writer(log_writer_function_1, SEVERITY_VERBOSE, 0);
 
-  logger_printf("Text with string %s", "works");
+  logger_printf(" Text with string %s", "works");
   logger1.read(buffer);
   STRCMP_EQUAL("[0x1000] Text with string works\n[0x1000] Text with string works\n", buffer);
 
@@ -303,7 +303,7 @@ TEST_GROUP(LOGGER_DECODER) {
 };
 
 TEST(LOGGER_DECODER, LoggerDecoder_DecodeEntryHelper_WritesDecodedEntry) {
-  const char *f1 = "Decoder helper of %s works";
+  const char *f1 = " Decoder helper of %s works";
   int n;
   strcpy(entry, "\n002A|string|\n");
   n = logger_decoder_decode_entry_helper(buffer, BUFSIZE, 42, f1, entry, strlen(entry));
@@ -317,7 +317,7 @@ TEST(LOGGER_DECODER, LoggerDecoder_DecodeEntryHelper_WritesDecodedEntry) {
 
 TEST(LOGGER_DECODER, LoggerDecoder_DecodeValidText_WritesDecodedText) {
   int n;
-  LogEntry entries[] = { { .id = 42, .format = "This entry has %s id" } };
+  LogEntry entries[] = { { .id = 42, .format = " This entry has %s id" } };
   logger_register_log_entries(entries, 1);
   strcpy(text, "\n002A|registered|\n\n002a|an|\n");
   size_t s_len = strlen(text);
@@ -335,7 +335,7 @@ TEST(LOGGER_DECODER, LoggerDecoder_DecodeValidTextWithNoRegisteredId_WritesDecod
   size_t s_len = strlen(text);
   size_t s_unused_bytes;
   n = logger_decode(buffer, BUFSIZE, text, s_len, &s_unused_bytes);
-  STRNCMP_EQUAL("[0x002A] unregistered\n[0x002A] an\n", buffer, n);
+  STRNCMP_EQUAL("[0x002A]unregistered\n[0x002A]an\n", buffer, n);
   CHECK_EQUAL(strlen(buffer), n);
 }
 
@@ -345,19 +345,19 @@ TEST(LOGGER_DECODER, LoggerDecoder_DecodeInValidText_WritesTextAsItIs) {
   size_t s_len = strlen(text);
   size_t s_unused_bytes;
   n = logger_decode(buffer, BUFSIZE, text, s_len, &s_unused_bytes);
-  STRNCMP_EQUAL("[0xFFFF] This part is garbage|002A|registered|\n[0xFFFF]  not valid either 002a|an|\n", buffer, n);
-  CHECK_EQUAL(strlen("[0xFFFF] This part is garbage|002A|registered|\n[0xFFFF]  not valid either 002a|an|\n"), n);
+  STRNCMP_EQUAL("[0xFFFF][L] This part is garbage|002A|registered|\n[0xFFFF][L]  not valid either 002a|an|\n", buffer, n);
+  CHECK_EQUAL(strlen("[0xFFFF][L] This part is garbage|002A|registered|\n[0xFFFF][L]  not valid either 002a|an|\n"), n);
 }
 
 TEST(LOGGER_DECODER, LoggerDecoder_DecodeText_DecodesValidPartsAndWritesTheRest) {
-  LogEntry entries[] = { { .id = 42, .format = "This entry has %s id" } };
+  LogEntry entries[] = { { .id = 42, .format = " This entry has %s id" } };
   logger_register_log_entries(entries, 1);
   int n;
   strcpy(text, "This part is garbage|\n002A|registered|\n garbage again\n\n002a|an|\nThis is garbage too but does not get written");
   size_t s_len = strlen(text);
   size_t s_unused_bytes;
   n = logger_decode(buffer, BUFSIZE, text, s_len, &s_unused_bytes);
-  STRNCMP_EQUAL("[0xFFFF] This part is garbage|\n[0x002A] This entry has registered id\n[0xFFFF]  garbage again\n[0x002A] This entry has an id\n", buffer, n);
+  STRNCMP_EQUAL("[0xFFFF][L] This part is garbage|\n[0x002A] This entry has registered id\n[0xFFFF][L]  garbage again\n[0x002A] This entry has an id\n", buffer, n);
   CHECK_EQUAL(strlen(buffer), n);
 }
 
@@ -368,9 +368,9 @@ TEST(LOGGER_DECODER, LoggerDecoder_DecodeTextInsufficientBuffer_DecodesUpToBuffe
   strcpy(text, "This part is garbage|\n002A|registered|\n garbage again\n002a|an|\nThis is garbage too but does not get written");
   size_t s_len = strlen(text);
   size_t s_unused_bytes;
-  n = logger_decode(buffer, 33, text, s_len, &s_unused_bytes);
-  STRNCMP_EQUAL("[0xFFFF] This part is garbage|\n", buffer, n);
-  CHECK_EQUAL(strlen("[0xFFFF] This part is garbage|\n"), n);
+  n = logger_decode(buffer, 36, text, s_len, &s_unused_bytes);
+  STRNCMP_EQUAL("[0xFFFF][L] This part is garbage|\n", buffer, n);
+  CHECK_EQUAL(strlen("[0xFFFF][L] This part is garbage|\n"), n);
   CHECK_EQUAL(strlen("\n002A|registered|\n garbage again\n002a|an|\nThis is garbage too but does not get written"), s_unused_bytes);
 }
 
