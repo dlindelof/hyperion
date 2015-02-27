@@ -78,7 +78,7 @@ LOG_ENTRY(NIQ_LOG_CFT_DATETIME,              0x8038, "[C] Actual: %s")
 LOG_ENTRY(NIQ_LOG_CFT_DATETIME_CHANGED,      0x8039, "[C] Changed: %s")
 LOG_ENTRY(NIQ_LOG_DIE_REASON,                0x803A, "[X] NiQ died because of %d")
 LOG_ENTRY(NIQ_LOG_SI_EVENT,                  0x803B, "[X] SI: %s")
-LOG_ENTRY(NIQ_LOG_ENERGY_SAVINGS,            0x803C, "[O] 7d: %2.2f, 30d: %2.2f, 365d: %2.2f")
+LOG_ENTRY(NIQ_LOG_ENERGY_SAVINGS,            0x803C, "[O] Estimated energy savings 7d: %.2f, 30d: %.2f, 365d: %.2f")
 
 
 /* This entry must be on the last line. Add new entries before this line. */
