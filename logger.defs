@@ -59,7 +59,7 @@ LOG_ENTRY(NIQ_LOG_OFT_SENSOR_ERROR,          0x8025, "[O] Sensor error, resettin
 LOG_ENTRY(NIQ_LOG_OFT_OFT_OK,                0x8026, "[O] OFT: %4.2f C")
 LOG_ENTRY(NIQ_LOG_OFT_SUMMER_BYPASS,         0x8027, "[O] Summer: bypass")
 LOG_ENTRY(NIQ_LOG_OFT_SCHEDULE,              0x8028, "[O] Schedule detected: %s")
-LOG_ENTRY(NIQ_LOG_OFT_STEP,                  0x8029, "[O] Step time: %u; Function calls: %u; OTSE: %4.2f Ohm")
+LOG_ENTRY(OBSELETE_10,                       0x8029, "[O] Step time: %u; Function calls: %u; OTSE: %4.2f Ohm")
 LOG_ENTRY(NIQ_LOG_OFT_SYSTEM_INFO,           0x802A, "[S] System errors 0x%06X and warnings 0x%04X")
 LOG_ENTRY(NIQ_LOG_DIE_BADSCHEDULE,           0x802B, "[U] !!!DEAD END (bad schedule detected), rebooting...")
 LOG_ENTRY(NIQ_LOG_NIQ_VERSION,               0x802C, "[U] NIQ VERSION:")
@@ -79,6 +79,7 @@ LOG_ENTRY(NIQ_LOG_CFT_DATETIME_CHANGED,      0x8039, "[C] Changed: %s")
 LOG_ENTRY(NIQ_LOG_DIE_REASON,                0x803A, "[X] NiQ died because of %d")
 LOG_ENTRY(NIQ_LOG_SI_EVENT,                  0x803B, "[X] SI: %s")
 LOG_ENTRY(NIQ_LOG_ENERGY_SAVINGS,            0x803C, "[O] Estimated energy savings 7d: %.2f, 30d: %.2f, 365d: %.2f")
+LOG_ENTRY(NIQ_LOG_OFT_STEP,                  0x803D, "[O] Step time: %u; Function calls: %u; OTSE: %4.2f Ohm => %4.2f C")
 
 
 /* This entry must be on the last line. Add new entries before this line. */
