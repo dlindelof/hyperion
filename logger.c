@@ -109,16 +109,13 @@ bool logger_register_log_entries_helper(LogEntry *entries, size_t count) {
 }
 
 static void logger_initialize_all_log_entries(void) {
-  if(!initialized) {
-    const unsigned long L_MAX_POSSIBLE_LOG_ENTRIES = 65536;
-    unsigned long i;
-    for(i = 0; i < L_MAX_POSSIBLE_LOG_ENTRIES; i ++) {
-      if(all_log_entries[i].id == LOGGER_ERROR_ID && i >= 1) {
-        logger_register_log_entries_helper(all_log_entries, i);
-        break;
-      }
+  const unsigned long L_MAX_POSSIBLE_LOG_ENTRIES = 65536;
+  unsigned long i;
+  for(i = 0; i < L_MAX_POSSIBLE_LOG_ENTRIES; i ++) {
+    if(all_log_entries[i].id == LOGGER_ERROR_ID && i >= 1) {
+      logger_register_log_entries_helper(all_log_entries, i);
+      break;
     }
-    initialized = true;
   }
 }
 
@@ -552,10 +549,10 @@ static size_t logger_decoder_get_length_of_next_entry(const char *entry, size_t 
 
 
 void logger_initialize(void) {
-  if(!initialized) {
-    logger_initialize_all_log_entries();
-    initialized = true;
-  }
+  log_entries_count = 0;
+  log_writers_count = 0;
+  logger_initialize_all_log_entries();
+  initialized = true;
 }
 
 bool logger_register_log_entries(LogEntry *entries, size_t count) {
