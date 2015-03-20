@@ -640,11 +640,11 @@ size_t logger_decode(char *dst, size_t d_len, const char *src, size_t s_len, siz
       int len = logger_decoder_decode_entry(dst, d_len, entry, entry_len);
 
       if(len == ERROR_DECODING) { // decoding failed
-        if(entry[0] == '\n') {
-          ++ entry;
-          -- entry_len;
+        if(entry[0] == '\n') { // do not write the first '\n'
+          len = logger_decoder_write_invalid_entry(dst, d_len, entry + 1, entry_len - 1);
+        } else {
+          len = logger_decoder_write_invalid_entry(dst, d_len, entry, entry_len);
         }
-        len = logger_decoder_write_invalid_entry(dst, d_len, entry, entry_len);
         entry_len --; // keep the end '\n'
       }
       if((size_t) len > d_len) { // not enough space in the output
