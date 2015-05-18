@@ -82,7 +82,7 @@ LOG_ENTRY(NIQ_LOG_SI_EVENT,                  0x803B, "[X] SI: %s")
 LOG_ENTRY(NIQ_LOG_ENERGY_SAVINGS,            0x803C, "[O] Estimated energy savings: actual: %.2f, average: %.2f")
 LOG_ENTRY(NIQ_LOG_OFT_STEP,                  0x803D, "[O] Step time: %u; Function calls: %u; OTSE: %4.2f Ohm => %4.2f C")
 LOG_ENTRY(NIQ_LOG_OFT_ABSENT_SETPOINTS,      0x803E, "[O] absent setpoint: %2.1f C")
-
+LOG_ENTRY(NIQ_LOG_OFT_MODE_HOLIDAY,          0x803F, "[O] Mode: Holiday")
 
 /* This entry must be on the last line. Add new entries before this line. */
 LOG_ENTRY(LOGGER_ERROR_ID,                   0xFFFF, "")
