@@ -1,10 +1,6 @@
 .PHONY: all
 all: tests valgrind_tests
 
-CPPUTEST_INCLUDE := /usr/include/CppUTest
-CPPUTEST_LIB     := /usr/lib/x86_64-linux-gnu/libCppUTest.a
-CPPUTESTEXT_LIB  := /usr/lib/x86_64-linux-gnu/libCppUTestExt.a
-
 BUILD_DIR      := build
 TEST_BUILD_DIR := $(BUILD_DIR)/tests
 
@@ -48,11 +44,11 @@ lzss: $(COBJS) $(UTILITIES_COBJS) | $(BUILD_DIR)
 
 
 $(TEST_BUILD_DIR)/tests: CC = gcc
-$(TEST_BUILD_DIR)/tests: CPPFLAGS += -I$(CPPUTEST_INCLUDE) -g
+$(TEST_BUILD_DIR)/tests: CPPFLAGS += -g
 $(TEST_BUILD_DIR)/tests: CPPFLAGS += -fprofile-arcs -ftest-coverage
 $(TEST_BUILD_DIR)/tests: CXX = g++
 $(TEST_BUILD_DIR)/tests: LD = ld
-$(TEST_BUILD_DIR)/tests: LDLIBS += $(CPPUTEST_LIB) $(CPPUTESTEXT_LIB) -lgcov
+$(TEST_BUILD_DIR)/tests: LDLIBS += `pkg-config --libs cpputest` -lgcov
 $(TEST_BUILD_DIR)/tests: $(CSRCS) $(TEST_CPPOBJS)
 	$(CXX) $(CPPFLAGS) $(LDFLAGS) -o $@ $(TEST_CPPOBJS) $(LDLIBS)
 
