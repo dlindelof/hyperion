@@ -90,5 +90,18 @@ LOG_ENTRY(NIQ_LOG_OFT_STEP,                  0x8043, "[O] Step time: %u; Functio
 LOG_ENTRY(NIQ_LOG_NEW_OTSE,                  0x8044, "[C] OTSE: %4.2f C => %4.2f Ohm")
 LOG_ENTRY(NIQ_LOG_CHANGE_BYPASS,             0x8045, "[X] Bypass turned %s")
 
+LOG_ENTRY(NIQ_LOG_LOAD_LICENCE_WRONG_LENGTH,    0x8046, "[L] Wrong license length detected")
+LOG_ENTRY(NIQ_LOG_LOAD_LICENCE_OK,              0x8047, "[L] Loaded a new license")
+LOG_ENTRY(NIQ_LOG_VALIDATE_LICENCE_BAD_BUFFER,  0x8048, "[L] Bad license buffer")
+LOG_ENTRY(NIQ_LOG_VALIDATE_LICENCE_BAD_CONTENT, 0x8049, "[L] Bad content in license buffer")
+LOG_ENTRY(NIQ_LOG_VALIDATE_LICENCE_BAD_SERIAL,  0x804A, "[L] Bad serial number in license")
+LOG_ENTRY(NIQ_LOG_VALIDATE_LICENCE_BAD_TIME,    0x804B, "[L] Bad time stamp")
+LOG_ENTRY(NIQ_LOG_VALIDATE_LICENCE_BAD_EXPIRY,  0x804C, "[L] Bad expiry in license")
+LOG_ENTRY(NIQ_LOG_LICENCE_SIGNATURE_OK,         0x804D, "[L] Saved new, verified license to flash")
+LOG_ENTRY(NIQ_LOG_LICENCE_SIGNATURE_FAILED,     0x804E, "[L] Failed to validate signature")
+LOG_ENTRY(NIQ_LOG_LICENCE_SIGNATURE_BAD_BUFFER, 0x804F, "[L] Bad signature buffer")
+LOG_ENTRY(NIQ_LOG_LICENCE_SIGNATURE_BAD_BASE64, 0x8050, "[L] Bad base64 formed signature")
+LOG_ENTRY(NIQ_LOG_LICENCE_EXPIRED,              0x8051, "[L] License expired")
+
 /* This entry must be on the last line. Add new entries before this line. */
 LOG_ENTRY(LOGGER_ERROR_ID,                   0xFFFF, "")
