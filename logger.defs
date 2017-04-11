@@ -103,5 +103,7 @@ LOG_ENTRY(NIQ_LOG_LICENCE_SIGNATURE_BAD_BUFFER, 0x804F, "[L] Bad signature buffe
 LOG_ENTRY(NIQ_LOG_LICENCE_SIGNATURE_BAD_BASE64, 0x8050, "[L] Bad base64 formed signature")
 LOG_ENTRY(NIQ_LOG_LICENCE_EXPIRED,              0x8051, "[L] License expired")
 
+LOG_ENTRY(NIQ_LOG_BACKUP_NO_BM,                 0x8100, "[B] No saved building model, creating one")
+
 /* This entry must be on the last line. Add new entries before this line. */
 LOG_ENTRY(LOGGER_ERROR_ID,                   0xFFFF, "")
