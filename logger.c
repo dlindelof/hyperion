@@ -580,7 +580,7 @@ bool logger_register_log_writer(LogWriter writer, LogSeverity severity, bool enc
 
 
 
-void logger_log(uint16_t id, ...) {
+void logger_log(int id, ...) {
   va_list varargs;
   va_start(varargs, id);
 
@@ -589,7 +589,7 @@ void logger_log(uint16_t id, ...) {
   va_end(varargs);
 }
 
-void logger_severity_log(LogSeverity severity, uint16_t id, ...) {
+void logger_severity_log(LogSeverity severity, int id, ...) {
   va_list varargs;
   va_start(varargs, id);
 

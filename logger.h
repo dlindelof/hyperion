@@ -42,8 +42,8 @@ void logger_initialize(void);
 bool logger_register_log_entries(LogEntry *entries, size_t count);
 bool logger_register_log_writer(LogWriter writer, LogSeverity severity, bool encode);
 
-void logger_log(uint16_t id, ...);
-void logger_severity_log(LogSeverity severity, uint16_t id, ...);
+void logger_log(int id, ...);
+void logger_severity_log(LogSeverity severity, int id, ...);
 void logger_printf(const char * format, ...) __attribute__ ((format (printf, 1, 2)));
 void logger_severity_printf(LogSeverity severity, const char * format, ...) __attribute__ ((format (printf, 2, 3)));
 

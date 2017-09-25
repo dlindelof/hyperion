@@ -1,6 +1,9 @@
 .PHONY: all
 all: tests valgrind_tests
 
+CPPUTEST_INCLUDE := `pkg-config --cflags cpputest`
+CPPUTEST_LIBS    := `pkg-config --libs cpputest`
+
 BUILD_DIR      := build
 TEST_BUILD_DIR := $(BUILD_DIR)/tests
 
@@ -44,11 +47,11 @@ lzss: $(COBJS) $(UTILITIES_COBJS) | $(BUILD_DIR)
 
 
 $(TEST_BUILD_DIR)/tests: CC = gcc
-$(TEST_BUILD_DIR)/tests: CPPFLAGS += -g
+$(TEST_BUILD_DIR)/tests: CPPFLAGS += $(CPPUTEST_INCLUDE) -g
 $(TEST_BUILD_DIR)/tests: CPPFLAGS += -fprofile-arcs -ftest-coverage
 $(TEST_BUILD_DIR)/tests: CXX = g++
 $(TEST_BUILD_DIR)/tests: LD = ld
-$(TEST_BUILD_DIR)/tests: LDLIBS += `pkg-config --libs cpputest` -lgcov
+$(TEST_BUILD_DIR)/tests: LDLIBS += $(CPPUTEST_LIBS)
 $(TEST_BUILD_DIR)/tests: $(CSRCS) $(TEST_CPPOBJS)
 	$(CXX) $(CPPFLAGS) $(LDFLAGS) -o $@ $(TEST_CPPOBJS) $(LDLIBS)
 

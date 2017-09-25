@@ -316,7 +316,7 @@ TEST(LOGGER_DECODER, LoggerDecoder_DecodeEntryHelper_WritesDecodedEntry) {
 }
 
 TEST(LOGGER_DECODER, LoggerDecoder_DecodeValidText_WritesDecodedText) {
-  int n;
+  size_t n;
   LogEntry entries[] = { { .id = 42, .format = " This entry has %s id" } };
   logger_register_log_entries(entries, 1);
   strcpy(text, "\n002A|registered|\n\n002a|an|\n");
@@ -328,7 +328,7 @@ TEST(LOGGER_DECODER, LoggerDecoder_DecodeValidText_WritesDecodedText) {
 }
 
 TEST(LOGGER_DECODER, LoggerDecoder_DecodeValidTextWithNoRegisteredId_WritesDecodedText) {
-  int n;
+  size_t n;
   LogEntry entries[] = { { .id = 42, .format = "This entry has %s id" } };
   logger_register_log_entries(entries, 0);
   strcpy(text, "\n002A|unregistered|\n\n002a|an|\n");
@@ -352,7 +352,7 @@ TEST(LOGGER_DECODER, LoggerDecoder_DecodeInValidText_WritesTextAsItIs) {
 TEST(LOGGER_DECODER, LoggerDecoder_DecodeText_DecodesValidPartsAndWritesTheRest) {
   LogEntry entries[] = { { .id = 42, .format = " This entry has %s id" } };
   logger_register_log_entries(entries, 1);
-  int n;
+  size_t n;
   strcpy(text, "This part is garbage|\n002A|registered|\n garbage again\n\n002a|an|\nThis is garbage too but does not get written");
   size_t s_len = strlen(text);
   size_t s_unused_bytes;
