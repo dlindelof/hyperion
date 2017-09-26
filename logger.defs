@@ -105,5 +105,7 @@ LOG_ENTRY(NIQ_LOG_LICENCE_EXPIRED,              0x8051, "[L] License expired")
 
 LOG_ENTRY(NIQ_LOG_BACKUP_NO_BM,                 0x8100, "[B] No saved building model, creating one")
 
-/* This entry must be on the last line. Add new entries before this line. */
+/* This entry must be on the last line. Add new entries before this line.
+ * Using a log id that won't fit in 16 bits will almost certainly lead to an error.
+ */
 LOG_ENTRY(LOGGER_ERROR_ID,                   0xFFFF, "")
